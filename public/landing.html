@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LectureAI — Turn Any Lecture Into Study Notes Instantly</title>
+  <meta name="description" content="Upload your lecture audio and get AI-generated study notes, key concepts, exam tips, and a personal tutor chatbot — in under 2 minutes." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black: #0a0a0a;
+      --white: #ffffff;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-400: #9ca3af;
+      --gray-600: #4b5563;
+      --gray-800: #1f2937;
+      --accent: #4f46e5;
+      --accent-light: #eef2ff;
+      --accent-dark: #3730a3;
+      --green: #059669;
+      --green-light: #ecfdf5;
+      --radius: 12px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.08);
+      --shadow-lg: 0 16px 48px rgba(0,0,0,0.12);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--white);
+      color: var(--black);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ───────────── NAV ───────────── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--gray-200);
+      padding: 0 24px;
+      height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo {
+      font-size: 20px; font-weight: 800; color: var(--black); text-decoration: none;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-links { display: flex; align-items: center; gap: 8px; }
+    .btn-ghost {
+      padding: 8px 18px; border-radius: 8px; font-size: 14px; font-weight: 500;
+      color: var(--gray-600); background: none; border: none; cursor: pointer;
+      text-decoration: none; transition: color .2s, background .2s;
+    }
+    .btn-ghost:hover { background: var(--gray-100); color: var(--black); }
+    .btn-primary {
+      padding: 10px 22px; border-radius: 8px; font-size: 14px; font-weight: 600;
+      color: var(--white); background: var(--accent); border: none; cursor: pointer;
+      text-decoration: none; transition: background .2s, transform .15s;
+    }
+    .btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); }
+
+    /* ───────────── HERO ───────────── */
+    .hero {
+      padding: 140px 24px 80px;
+      text-align: center;
+      background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 60%);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(79,70,229,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--accent-light); color: var(--accent);
+      padding: 6px 14px; border-radius: 100px; font-size: 13px; font-weight: 600;
+      margin-bottom: 24px; border: 1px solid rgba(79,70,229,0.2);
+    }
+    .hero-badge .dot { width: 7px; height: 7px; background: var(--accent); border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .hero h1 {
+      font-size: clamp(36px, 6vw, 68px); font-weight: 900;
+      line-height: 1.1; letter-spacing: -2px; color: var(--black);
+      max-width: 800px; margin: 0 auto 20px;
+    }
+    .hero h1 em { color: var(--accent); font-style: normal; }
+    .hero p {
+      font-size: 18px; color: var(--gray-600); max-width: 520px;
+      margin: 0 auto 36px; line-height: 1.7;
+    }
+    .hero-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-hero {
+      padding: 15px 32px; border-radius: 10px; font-size: 16px; font-weight: 700;
+      color: var(--white); background: var(--accent); border: none; cursor: pointer;
+      text-decoration: none; transition: all .2s; box-shadow: 0 4px 16px rgba(79,70,229,0.3);
+    }
+    .btn-hero:hover { background: var(--accent-dark); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(79,70,229,0.35); }
+    .btn-hero-outline {
+      padding: 15px 32px; border-radius: 10px; font-size: 16px; font-weight: 600;
+      color: var(--black); background: var(--white); border: 2px solid var(--gray-200);
+      cursor: pointer; text-decoration: none; transition: all .2s;
+    }
+    .btn-hero-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ───────────── TRUST BAR ───────────── */
+    .trust-bar {
+      padding: 20px 24px;
+      background: var(--white);
+      border-top: 1px solid var(--gray-200);
+      border-bottom: 1px solid var(--gray-200);
+      display: flex; align-items: center; justify-content: center; gap: 36px;
+      flex-wrap: wrap;
+    }
+    .trust-item {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 500; color: var(--gray-600);
+    }
+    .trust-icon { font-size: 16px; }
+
+    /* ───────────── STATS ───────────── */
+    .stats-section {
+      padding: 72px 24px;
+      background: var(--black);
+      text-align: center;
+    }
+    .stats-grid {
+      max-width: 900px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 48px;
+    }
+    .stat-item {}
+    .stat-number {
+      font-size: 52px; font-weight: 900; color: var(--white);
+      letter-spacing: -2px; line-height: 1;
+    }
+    .stat-number span { color: var(--accent); }
+    .stat-label {
+      font-size: 14px; color: var(--gray-400); margin-top: 8px; font-weight: 500;
+    }
+
+    /* ───────────── HOW IT WORKS ───────────── */
+    .section {
+      padding: 96px 24px;
+    }
+    .section-inner { max-width: 1100px; margin: 0 auto; }
+    .section-label {
+      display: inline-block;
+      font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--accent);
+      background: var(--accent-light); padding: 4px 12px; border-radius: 100px;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: clamp(28px, 4vw, 44px); font-weight: 800;
+      letter-spacing: -1.5px; line-height: 1.15; margin-bottom: 16px;
+    }
+    .section-sub { font-size: 17px; color: var(--gray-600); max-width: 520px; }
+    .steps-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 32px; margin-top: 56px;
+    }
+    .step-card {
+      padding: 32px 28px; border-radius: var(--radius);
+      border: 1px solid var(--gray-200); background: var(--white);
+      transition: box-shadow .2s, transform .2s; position: relative;
+    }
+    .step-card:hover { box-shadow: var(--shadow); transform: translateY(-3px); }
+    .step-number {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: var(--accent); color: var(--white);
+      font-size: 16px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px;
+    }
+    .step-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+    .step-card p { font-size: 14px; color: var(--gray-600); line-height: 1.6; }
+    .step-connector {
+      display: none;
+    }
+
+    /* ───────────── FEATURES ───────────── */
+    .features-section { background: var(--gray-50); }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px; margin-top: 56px;
+    }
+    .feature-card {
+      background: var(--white); border-radius: var(--radius);
+      padding: 32px 28px; border: 1px solid var(--gray-200);
+      transition: box-shadow .2s, transform .2s;
+    }
+    .feature-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
+    .feature-icon {
+      width: 52px; height: 52px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; margin-bottom: 20px;
+    }
+    .feature-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p { font-size: 14px; color: var(--gray-600); line-height: 1.7; }
+    .feature-tag {
+      display: inline-block; margin-top: 14px;
+      font-size: 11px; font-weight: 700; letter-spacing: .5px;
+      padding: 3px 10px; border-radius: 100px;
+    }
+
+    /* ───────────── DEMO PREVIEW ───────────── */
+    .demo-section { background: var(--white); }
+    .demo-wrapper {
+      margin-top: 56px;
+      border-radius: 16px; overflow: hidden;
+      border: 1px solid var(--gray-200);
+      box-shadow: var(--shadow-lg);
+      max-width: 840px; margin-left: auto; margin-right: auto; margin-top: 56px;
+    }
+    .demo-topbar {
+      background: var(--gray-100); padding: 14px 18px;
+      display: flex; align-items: center; gap: 8px;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .demo-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .demo-url {
+      margin-left: 12px; font-size: 12px; color: var(--gray-600);
+      background: var(--white); border: 1px solid var(--gray-200);
+      border-radius: 6px; padding: 4px 12px; flex: 1; max-width: 300px;
+    }
+    .demo-body { padding: 32px; background: var(--white); }
+    .demo-tabs { display: flex; gap: 4px; margin-bottom: 24px; }
+    .demo-tab {
+      padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      cursor: pointer; border: none; transition: all .15s;
+    }
+    .demo-tab.active { background: var(--black); color: var(--white); }
+    .demo-tab:not(.active) { background: var(--gray-100); color: var(--gray-600); }
+    .demo-content-section { margin-bottom: 20px; }
+    .demo-content-section h4 {
+      font-size: 11px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--gray-400); margin-bottom: 10px;
+    }
+    .demo-summary {
+      font-size: 14px; color: var(--gray-800); line-height: 1.7;
+      background: var(--gray-50); padding: 16px; border-radius: 8px;
+      border-left: 3px solid var(--accent);
+    }
+    .demo-bullets { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .demo-bullets li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--gray-800);
+    }
+    .demo-bullets li::before {
+      content: '✓'; color: var(--green); font-weight: 700;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .demo-concept {
+      background: var(--gray-50); border-radius: 8px; padding: 14px 16px;
+      border: 1px solid var(--gray-200);
+    }
+    .demo-concept h5 { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+    .demo-concept p { font-size: 13px; color: var(--gray-600); }
+    .demo-code {
+      background: var(--black); color: #a5f3fc; font-family: 'Courier New', monospace;
+      font-size: 12px; padding: 10px 14px; border-radius: 6px; margin-top: 8px;
+    }
+    .demo-exam-tip {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #fffbeb; color: #92400e;
+      border: 1px solid #fde68a;
+      font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 100px; margin-top: 8px;
+    }
+
+    /* ───────────── TESTIMONIALS ───────────── */
+    .testimonials-section { background: var(--gray-50); }
+    .testimonials-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px; margin-top: 56px;
+    }
+    .testimonial-card {
+      background: var(--white); border-radius: var(--radius);
+      padding: 28px; border: 1px solid var(--gray-200);
+      transition: box-shadow .2s;
+    }
+    .testimonial-card:hover { box-shadow: var(--shadow); }
+    .stars { color: #f59e0b; font-size: 14px; margin-bottom: 14px; }
+    .testimonial-text {
+      font-size: 15px; color: var(--gray-800); line-height: 1.7;
+      margin-bottom: 20px; font-style: italic;
+    }
+    .testimonial-author { display: flex; align-items: center; gap: 12px; }
+    .author-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 700; color: var(--white); flex-shrink: 0;
+    }
+    .author-name { font-size: 14px; font-weight: 700; }
+    .author-role { font-size: 12px; color: var(--gray-400); }
+
+    /* ───────────── SECURITY ───────────── */
+    .security-section { background: var(--white); }
+    .security-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 24px; margin-top: 56px;
+    }
+    .security-card {
+      display: flex; gap: 16px; align-items: flex-start;
+      padding: 24px; border-radius: var(--radius);
+      border: 1px solid var(--gray-200); background: var(--gray-50);
+    }
+    .security-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      background: var(--green-light); display: flex; align-items: center;
+      justify-content: center; font-size: 20px; flex-shrink: 0;
+    }
+    .security-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .security-card p { font-size: 13px; color: var(--gray-600); }
+
+    /* ───────────── PRICING ───────────── */
+    .pricing-section { background: var(--gray-50); }
+    .pricing-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px; margin-top: 56px; max-width: 860px; margin-left: auto; margin-right: auto;
+    }
+    .pricing-card {
+      background: var(--white); border-radius: var(--radius);
+      padding: 36px; border: 1px solid var(--gray-200);
+      position: relative; transition: box-shadow .2s;
+    }
+    .pricing-card.featured {
+      border: 2px solid var(--accent); box-shadow: var(--shadow);
+    }
+    .pricing-badge {
+      position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+      background: var(--accent); color: var(--white);
+      font-size: 11px; font-weight: 700; letter-spacing: .5px;
+      padding: 4px 16px; border-radius: 100px;
+    }
+    .pricing-name { font-size: 14px; font-weight: 700; color: var(--gray-600); margin-bottom: 12px; }
+    .pricing-price { font-size: 48px; font-weight: 900; letter-spacing: -2px; line-height: 1; }
+    .pricing-price sup { font-size: 20px; vertical-align: super; font-weight: 700; }
+    .pricing-price sub { font-size: 14px; color: var(--gray-400); font-weight: 500; }
+    .pricing-desc { font-size: 13px; color: var(--gray-600); margin: 12px 0 24px; }
+    .pricing-divider { border: none; border-top: 1px solid var(--gray-200); margin: 24px 0; }
+    .pricing-features { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+    .pricing-features li {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 14px; color: var(--gray-800);
+    }
+    .pricing-features li .check { color: var(--green); font-weight: 700; }
+    .pricing-features li .x { color: var(--gray-400); }
+    .btn-pricing {
+      display: block; width: 100%; text-align: center;
+      padding: 12px; border-radius: 8px; font-size: 14px; font-weight: 700;
+      cursor: pointer; text-decoration: none; transition: all .2s;
+    }
+    .btn-pricing-outline {
+      border: 2px solid var(--gray-200); color: var(--black); background: var(--white);
+    }
+    .btn-pricing-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-pricing-filled {
+      background: var(--accent); color: var(--white); border: 2px solid var(--accent);
+    }
+    .btn-pricing-filled:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+
+    /* ───────────── FAQ ───────────── */
+    .faq-section { background: var(--white); }
+    .faq-list { max-width: 680px; margin: 56px auto 0; display: flex; flex-direction: column; gap: 12px; }
+    .faq-item {
+      border: 1px solid var(--gray-200); border-radius: var(--radius); overflow: hidden;
+    }
+    .faq-question {
+      padding: 20px 24px; font-size: 15px; font-weight: 600;
+      cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+      background: var(--white); border: none; width: 100%; text-align: left;
+      transition: background .15s;
+    }
+    .faq-question:hover { background: var(--gray-50); }
+    .faq-chevron { font-size: 12px; color: var(--gray-400); transition: transform .2s; }
+    .faq-answer {
+      max-height: 0; overflow: hidden;
+      transition: max-height .3s ease, padding .3s;
+      font-size: 14px; color: var(--gray-600); line-height: 1.7;
+      padding: 0 24px;
+    }
+    .faq-item.open .faq-answer { max-height: 200px; padding: 0 24px 20px; }
+    .faq-item.open .faq-chevron { transform: rotate(180deg); }
+
+    /* ───────────── CTA BOTTOM ───────────── */
+    .cta-section {
+      background: var(--black); padding: 96px 24px;
+      text-align: center;
+    }
+    .cta-section h2 {
+      font-size: clamp(30px, 5vw, 52px); font-weight: 900;
+      color: var(--white); letter-spacing: -2px; margin-bottom: 16px;
+    }
+    .cta-section h2 em { color: var(--accent); font-style: normal; }
+    .cta-section p { font-size: 17px; color: var(--gray-400); margin-bottom: 36px; }
+    .cta-guarantee {
+      margin-top: 20px; font-size: 13px; color: var(--gray-400);
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+
+    /* ───────────── FOOTER ───────────── */
+    footer {
+      background: var(--black); border-top: 1px solid #1a1a1a;
+      padding: 32px 24px; text-align: center;
+    }
+    footer p { font-size: 13px; color: var(--gray-600); }
+    .footer-links { display: flex; justify-content: center; gap: 24px; margin-bottom: 16px; }
+    .footer-links a { font-size: 13px; color: var(--gray-400); text-decoration: none; }
+    .footer-links a:hover { color: var(--white); }
+
+    /* ───────────── RESPONSIVE ───────────── */
+    @media (max-width: 640px) {
+      nav { padding: 0 16px; }
+      .hero { padding: 100px 16px 60px; }
+      .section { padding: 64px 16px; }
+      .stats-grid { gap: 32px; }
+      .hero-ctas { flex-direction: column; align-items: center; }
+      .btn-hero, .btn-hero-outline { width: 100%; max-width: 320px; text-align: center; }
+      .trust-bar { gap: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── NAV ─── -->
+<nav>
+  <a href="#" class="nav-logo">Lecture<span>AI</span></a>
+  <div class="nav-links">
+    <a href="#features" class="btn-ghost">Features</a>
+    <a href="#pricing" class="btn-ghost">Pricing</a>
+    <a href="/sign-in" class="btn-ghost">Sign in</a>
+    <a href="/sign-up" class="btn-primary">Get started free</a>
+  </div>
+</nav>
+
+<!-- ─── HERO ─── -->
+<section class="hero">
+  <div class="hero-badge">
+    <span class="dot"></span>
+    Powered by Claude AI &amp; OpenAI
+  </div>
+  <h1>Turn Any Lecture Into<br /><em>Perfect Study Notes</em></h1>
+  <p>Upload your lecture audio and get structured notes, key concepts, exam tips, and an AI tutor — in under 2 minutes.</p>
+  <div class="hero-ctas">
+    <a href="/sign-up" class="btn-hero">Start for free — no credit card</a>
+    <a href="#demo" class="btn-hero-outline">See how it works ↓</a>
+  </div>
+</section>
+
+<!-- ─── TRUST BAR ─── -->
+<div class="trust-bar">
+  <div class="trust-item"><span class="trust-icon">🔒</span> Secure &amp; private</div>
+  <div class="trust-item"><span class="trust-icon">⚡</span> Results in under 2 minutes</div>
+  <div class="trust-item"><span class="trust-icon">🎓</span> Built for CS students</div>
+  <div class="trust-item"><span class="trust-icon">🤖</span> Claude + Whisper AI</div>
+  <div class="trust-item"><span class="trust-icon">✅</span> Free to start</div>
+</div>
+
+<!-- ─── STATS ─── -->
+<section class="stats-section">
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-number">2<span>min</span></div>
+      <div class="stat-label">Average processing time</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">98<span>%</span></div>
+      <div class="stat-label">Transcription accuracy</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">5<span>x</span></div>
+      <div class="stat-label">Faster than manual note-taking</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">4<span>+</span></div>
+      <div class="stat-label">Audio formats supported</div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── HOW IT WORKS ─── -->
+<section class="section" id="demo">
+  <div class="section-inner">
+    <div class="section-label">How it works</div>
+    <h2 class="section-title">From lecture to study guide<br />in 3 simple steps</h2>
+    <p class="section-sub">No setup required. Just upload your lecture and LectureAI handles everything else.</p>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-number">1</div>
+        <h3>Upload your lecture</h3>
+        <p>Drag and drop any MP3, MP4, WAV, or M4A file — up to 25MB. Recorded live? Downloaded from YouTube? Both work perfectly.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">2</div>
+        <h3>AI transcribes &amp; analyses</h3>
+        <p>OpenAI Whisper transcribes your audio with 98% accuracy. Claude then reads the full transcript and extracts every key idea.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">3</div>
+        <h3>Get your study package</h3>
+        <p>Receive structured notes, concept explanations with code examples, exam tips, and a personal chatbot you can quiz on the lecture.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">4</div>
+        <h3>Chat &amp; review anytime</h3>
+        <p>Ask follow-up questions, request clarifications, or test your knowledge. Every lecture is saved so you can come back before exams.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── DEMO PREVIEW ─── -->
+<section class="section" style="background:var(--gray-50); padding-top: 0;">
+  <div class="section-inner">
+    <div class="demo-wrapper">
+      <div class="demo-topbar">
+        <div class="demo-dot" style="background:#ff5f57"></div>
+        <div class="demo-dot" style="background:#febc2e"></div>
+        <div class="demo-dot" style="background:#28c840"></div>
+        <div class="demo-url">lectureai.app/dashboard</div>
+      </div>
+      <div class="demo-body">
+        <div class="demo-tabs">
+          <button class="demo-tab active">📝 Notes</button>
+          <button class="demo-tab">💬 Chat</button>
+        </div>
+        <div class="demo-content-section">
+          <h4>Summary</h4>
+          <div class="demo-summary">
+            This lecture introduces Big O notation and time complexity analysis. It covers constant, linear, and quadratic growth, explains why we drop coefficients, and demonstrates how to measure algorithm efficiency with real code examples.
+          </div>
+        </div>
+        <div class="demo-content-section">
+          <h4>Key Points</h4>
+          <ul class="demo-bullets">
+            <li>Big O describes the worst-case performance of an algorithm</li>
+            <li>O(1) is constant time — the fastest possible complexity</li>
+            <li>Nested loops typically result in O(n²) time complexity</li>
+            <li>We always drop constants: O(2n) simplifies to O(n)</li>
+          </ul>
+        </div>
+        <div class="demo-content-section">
+          <h4>Core Concept</h4>
+          <div class="demo-concept">
+            <h5>Binary Search — O(log n)</h5>
+            <p>Repeatedly halves the search space, making it dramatically faster than linear search for large datasets.</p>
+            <div class="demo-code">def binary_search(arr, target):<br />&nbsp;&nbsp;lo, hi = 0, len(arr) - 1<br />&nbsp;&nbsp;while lo &lt;= hi:<br />&nbsp;&nbsp;&nbsp;&nbsp;mid = (lo + hi) // 2<br />&nbsp;&nbsp;&nbsp;&nbsp;if arr[mid] == target: return mid</div>
+            <div class="demo-exam-tip">⚠️ Exam tip: Binary search requires a sorted array — a common trick question</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FEATURES ─── -->
+<section class="section features-section" id="features">
+  <div class="section-inner">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything you need<br />to ace your exams</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#eef2ff">🎙️</div>
+        <h3>Accurate Transcription</h3>
+        <p>OpenAI Whisper converts your lecture audio to text with industry-leading accuracy — even with accents, technical jargon, and background noise.</p>
+        <span class="feature-tag" style="background:#eef2ff; color:var(--accent)">Whisper AI</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#ecfdf5">📋</div>
+        <h3>Structured Study Notes</h3>
+        <p>Not just a transcript — Claude extracts the most important ideas and formats them into a structured, scannable study guide you can actually use.</p>
+        <span class="feature-tag" style="background:#ecfdf5; color:var(--green)">Claude AI</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#fffbeb">💡</div>
+        <h3>Concept Explanations</h3>
+        <p>Every major concept gets a plain-English explanation plus code examples. Perfect for reviewing before an exam when time is short.</p>
+        <span class="feature-tag" style="background:#fffbeb; color:#92400e">Exam-ready</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#fdf2f8">💬</div>
+        <h3>AI Tutor Chatbot</h3>
+        <p>Ask questions about anything in the lecture. The AI knows exactly what was covered and gives context-aware answers — like a TA available 24/7.</p>
+        <span class="feature-tag" style="background:#fdf2f8; color:#9d174d">Always available</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#f0fdf4">📚</div>
+        <h3>Lecture History</h3>
+        <p>Every lecture is saved to your account. Access all your notes and chats anytime — from lecture 1 to the final review session before exams.</p>
+        <span class="feature-tag" style="background:#f0fdf4; color:#166534">Cloud saved</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:#fff7ed">⚡</div>
+        <h3>Fast &amp; Simple</h3>
+        <p>No complex setup, no learning curve. Upload → wait 2 minutes → study. It really is that simple. Works on any device.</p>
+        <span class="feature-tag" style="background:#fff7ed; color:#c2410c">2 min average</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── TESTIMONIALS ─── -->
+<section class="section testimonials-section">
+  <div class="section-inner">
+    <div class="section-label">Student reviews</div>
+    <h2 class="section-title">Students are saving hours<br />every week</h2>
+    <div class="testimonials-grid">
+      <div class="testimonial-card">
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">"I uploaded a 90-minute operating systems lecture and had complete study notes in 2 minutes. The exam tips alone are worth it — it flagged exactly what came up in the test."</p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background:#4f46e5">A</div>
+          <div>
+            <div class="author-name">Aiden K.</div>
+            <div class="author-role">Computer Science, Year 3</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">"The chatbot is insane. I asked it to explain why the professor's binary tree example used recursion instead of iteration and it gave me a perfect explanation. Better than office hours."</p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background:#059669">P</div>
+          <div>
+            <div class="author-name">Priya M.</div>
+            <div class="author-role">Software Engineering, Year 2</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">"I missed a lecture due to illness. Instead of borrowing messy notes, I grabbed the recording and had comprehensive notes with code examples within minutes. Genuinely lifesaving."</p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background:#dc2626">J</div>
+          <div>
+            <div class="author-name">James L.</div>
+            <div class="author-role">Data Science, Year 4</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">"The recommended YouTube resources it suggests are actually useful — not random videos. It clearly understands the topic and picks content that matches what was taught. Impressive."</p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background:#d97706">S</div>
+          <div>
+            <div class="author-name">Sofia T.</div>
+            <div class="author-role">Computer Science, Year 1</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">"Used it for my algorithms course — 12 lectures uploaded, all saved neatly. Come exam season I just reviewed the AI notes for each one. Went from a C student to an A."</p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background:#7c3aed">R</div>
+          <div>
+            <div class="author-name">Reza H.</div>
+            <div class="author-role">Information Technology, Year 3</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <div class="stars">★★★★★</div>
+        <p class="testimonial-text">"As someone whose first language isn't English, having the lecture transcribed and then explained clearly is incredibly helpful. I understand more from the AI notes than from the lecture itself."</p>
+        <div class="testimonial-author">
+          <div class="author-avatar" style="background:#0891b2">L</div>
+          <div>
+            <div class="author-name">Lin W.</div>
+            <div class="author-role">Computer Engineering, Year 2</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SECURITY & TRUST ─── -->
+<section class="section security-section">
+  <div class="section-inner">
+    <div class="section-label">Trust &amp; Security</div>
+    <h2 class="section-title">Your data is safe with us</h2>
+    <p class="section-sub">We take the privacy of your lectures and personal information seriously.</p>
+    <div class="security-grid">
+      <div class="security-card">
+        <div class="security-icon">🔐</div>
+        <div>
+          <h4>Secure Authentication</h4>
+          <p>Powered by Clerk — enterprise-grade auth used by thousands of apps worldwide.</p>
+        </div>
+      </div>
+      <div class="security-card">
+        <div class="security-icon">🛡️</div>
+        <div>
+          <h4>Your Data Stays Yours</h4>
+          <p>Your lectures and notes are stored privately per account. No other user can ever access them.</p>
+        </div>
+      </div>
+      <div class="security-card">
+        <div class="security-icon">🔒</div>
+        <div>
+          <h4>Encrypted in Transit</h4>
+          <p>All data is transmitted over HTTPS/TLS. Your audio files are never stored permanently on our servers.</p>
+        </div>
+      </div>
+      <div class="security-card">
+        <div class="security-icon">🏦</div>
+        <div>
+          <h4>Trusted AI Providers</h4>
+          <p>We use OpenAI and Anthropic — the most trusted and privacy-conscious AI providers in the industry.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── PRICING ─── -->
+<section class="section pricing-section" id="pricing">
+  <div class="section-inner" style="text-align:center">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-title">Start free, upgrade when ready</h2>
+    <p class="section-sub" style="margin: 0 auto;">No credit card required to get started. Cancel anytime.</p>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <div class="pricing-name">Free</div>
+        <div class="pricing-price"><sup>$</sup>0<sub>/mo</sub></div>
+        <p class="pricing-desc">Perfect for trying LectureAI before committing.</p>
+        <hr class="pricing-divider" />
+        <ul class="pricing-features">
+          <li><span class="check">✓</span> 3 lectures per month</li>
+          <li><span class="check">✓</span> AI-generated notes</li>
+          <li><span class="check">✓</span> AI chat (10 messages/lecture)</li>
+          <li><span class="check">✓</span> Lecture history</li>
+          <li><span class="x">✗</span> <span style="color:var(--gray-400)">PDF export</span></li>
+          <li><span class="x">✗</span> <span style="color:var(--gray-400)">Unlimited chats</span></li>
+        </ul>
+        <a href="/sign-up" class="btn-pricing btn-pricing-outline">Get started free</a>
+      </div>
+      <div class="pricing-card featured">
+        <div class="pricing-badge">MOST POPULAR</div>
+        <div class="pricing-name">Pro</div>
+        <div class="pricing-price"><sup>$</sup>9<sub>/mo</sub></div>
+        <p class="pricing-desc">For students who rely on LectureAI every week.</p>
+        <hr class="pricing-divider" />
+        <ul class="pricing-features">
+          <li><span class="check">✓</span> <strong>Unlimited</strong> lectures</li>
+          <li><span class="check">✓</span> AI-generated notes</li>
+          <li><span class="check">✓</span> <strong>Unlimited</strong> AI chat</li>
+          <li><span class="check">✓</span> Full lecture history</li>
+          <li><span class="check">✓</span> PDF export</li>
+          <li><span class="check">✓</span> Priority processing</li>
+        </ul>
+        <a href="/sign-up" class="btn-pricing btn-pricing-filled">Start free trial</a>
+      </div>
+    </div>
+    <p style="margin-top:24px; font-size:13px; color:var(--gray-400)">🔒 Payments are secure and encrypted. Cancel anytime — no questions asked.</p>
+  </div>
+</section>
+
+<!-- ─── FAQ ─── -->
+<section class="section faq-section">
+  <div class="section-inner" style="text-align:center">
+    <div class="section-label">FAQ</div>
+    <h2 class="section-title">Common questions</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          What audio formats are supported?
+          <span class="faq-chevron">▼</span>
+        </button>
+        <div class="faq-answer">LectureAI supports MP3, MP4, WAV, and M4A files up to 25MB. This covers most lecture recordings — whether recorded on a phone, laptop, or downloaded from your university portal.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          How accurate is the transcription?
+          <span class="faq-chevron">▼</span>
+        </button>
+        <div class="faq-answer">We use OpenAI's Whisper model, which achieves approximately 98% word accuracy on clear audio. Performance may vary with strong accents, heavy background noise, or very technical vocabulary, but it handles most lecture recordings extremely well.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          Are my lecture recordings stored permanently?
+          <span class="faq-chevron">▼</span>
+        </button>
+        <div class="faq-answer">Audio files are processed and then discarded — we don't permanently store your recording files. The transcript and notes are saved to your account so you can access them later, but the original audio is not retained.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          Does it work for subjects other than Computer Science?
+          <span class="faq-chevron">▼</span>
+        </button>
+        <div class="faq-answer">LectureAI is currently optimised for CS and software engineering lectures — it generates code examples and CS-specific exam tips. Support for other subjects like mathematics, business, and medicine is on the roadmap.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          Can I cancel my subscription at any time?
+          <span class="faq-chevron">▼</span>
+        </button>
+        <div class="faq-answer">Yes, absolutely. You can cancel your Pro subscription at any time from your account settings. You'll continue to have Pro access until the end of your billing period, then automatically revert to the free plan.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CTA ─── -->
+<section class="cta-section">
+  <h2>Stop re-watching lectures.<br /><em>Start understanding them.</em></h2>
+  <p>Join students turning hours of recordings into exam-ready notes.</p>
+  <a href="/sign-up" class="btn-hero">Get started free — no credit card needed</a>
+  <div class="cta-guarantee">🔒 Secure sign-up &nbsp;·&nbsp; Free plan available &nbsp;·&nbsp; Cancel anytime</div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+  <div class="footer-links">
+    <a href="#">Privacy Policy</a>
+    <a href="#">Terms of Service</a>
+    <a href="#">Contact</a>
+  </div>
+  <p>© 2026 LectureAI. Built with ❤️ for CS students everywhere.</p>
+</footer>
+
+<script>
+  function toggleFaq(btn) {
+    const item = btn.closest('.faq-item');
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(taskkill /PID 23016 /F)",
+      "Bash(cmd /c \"taskkill /PID 23016 /F\")",
+      "Bash(powershell -Command \"Stop-Process -Id 23016 -Force -ErrorAction SilentlyContinue; Write-Host 'done'\")",
+      "Bash(powershell -Command \"Remove-Item -Recurse -Force 'C:\\\\Users\\\\User\\\\Desktop\\\\lectureai\\\\.next' -ErrorAction SilentlyContinue; Write-Host 'cleared'\")",
+      "Bash(powershell -Command \"Remove-Item -Recurse -Force 'C:\\\\Users\\\\User\\\\Desktop\\\\lectureai\\\\.next' -ErrorAction SilentlyContinue; Write-Host 'done'\")",
+      "Bash(node --input-type=module)"
+    ]
+  }
+}
