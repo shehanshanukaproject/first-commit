@@ -56,8 +56,9 @@ export default function Home() {
     setProLoading(true)
     try {
       const res = await fetch('/api/paypal/create-subscription', { method: 'POST' })
-      const data = await res.json()
       if (res.status === 401) { window.location.href = '/sign-in'; return }
+      let data
+      try { data = await res.json() } catch { throw new Error('Server error. Please try again.') }
       if (data.error) throw new Error(data.error)
       if (data.approvalUrl) {
         window.location.href = data.approvalUrl

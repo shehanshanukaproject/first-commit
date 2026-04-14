@@ -76,7 +76,9 @@ export default function Dashboard() {
       style: { shape: 'rect', color: 'blue', layout: 'vertical', label: 'subscribe' },
       createSubscription: async () => {
         const res = await fetch('/api/paypal/create-subscription', { method: 'POST' })
-        const data = await res.json()
+        if (!res.ok && res.status === 401) throw new Error('Please sign in to upgrade.')
+        let data
+        try { data = await res.json() } catch { throw new Error('Server error. Please try again.') }
         if (data.error) throw new Error(data.error)
         return data.subscriptionId
       },
@@ -104,7 +106,9 @@ export default function Dashboard() {
     setUpgradeLoading(true)
     try {
       const res = await fetch('/api/paypal/create-subscription', { method: 'POST' })
-      const data = await res.json()
+      if (res.status === 401) { window.location.href = '/sign-in'; return }
+      let data
+      try { data = await res.json() } catch { throw new Error('Server error. Please try again.') }
       console.log('[PayPal] create-subscription response:', data)
       if (data.approvalUrl) {
         window.location.href = data.approvalUrl
