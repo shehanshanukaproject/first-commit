@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getSupabaseServer } from '@/lib/supabase-server'
+import { getUserSubscription, isProUser } from '@/lib/subscription'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
@@ -15,14 +16,20 @@ export async function POST(request) {
 
     const { transcript } = await request.json()
 
-    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-    const { count } = await getSupabaseServer()
-      .from('lectures')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('created_at', startOfMonth)
-    if (count >= 3) {
-      return Response.json({ error: 'Free plan limit reached. Upgrade to Pro for unlimited lectures.' }, { status: 429 })
+    const subscription = await getUserSubscription(userId)
+    if (!isProUser(subscription)) {
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+      const { count } = await getSupabaseServer()
+        .from('lectures')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', startOfMonth)
+      if (count >= 3) {
+        return Response.json(
+          { error: 'Free plan limit reached. Upgrade to Pro to process unlimited lectures.' },
+          { status: 403 }
+        )
+      }
     }
 
     const message = await anthropic.messages.create({

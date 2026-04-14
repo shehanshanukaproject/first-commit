@@ -48,24 +48,8 @@ const faqs = [
 
 export default function Home() {
   const [openFaq, setOpenFaq] = useState(null)
-  const [checkoutLoading, setCheckoutLoading] = useState(false)
-
-  const handleUpgrade = async () => {
-    setCheckoutLoading(true)
-    try {
-      const res = await fetch('/api/checkout', { method: 'POST' })
-      const data = await res.json()
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        window.location.href = '/sign-up'
-      }
-    } catch {
-      window.location.href = '/sign-up'
-    } finally {
-      setCheckoutLoading(false)
-    }
-  }
+  const [waitlistEmail, setWaitlistEmail] = useState('')
+  const [waitlistSubmitted, setWaitlistSubmitted] = useState(false)
 
   return (
     <>
@@ -280,7 +264,10 @@ export default function Home() {
             <div className="l-pricing-card featured">
               <div className="l-pricing-badge">MOST POPULAR</div>
               <div className="l-pricing-name">Pro</div>
-              <div className="l-pricing-price"><sup>$</sup>6<sub>/mo</sub></div>
+              <div className="l-pricing-price" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                <span><sup>$</sup>9<sub>/mo</sub></span>
+                <span style={{ background: '#f3f4f6', color: '#6b7280', fontSize: '11px', padding: '2px 8px', borderRadius: '100px', fontWeight: 500, lineHeight: '1.5' }}>Coming Soon</span>
+              </div>
               <p className="l-pricing-desc">For students who rely on LectureAI every week.</p>
               <hr className="l-pricing-divider" />
               <ul className="l-pricing-features">
@@ -292,17 +279,32 @@ export default function Home() {
                 <li><span className="check">✓</span> PDF export</li>
                 <li><span className="check">✓</span> Priority processing</li>
               </ul>
-              <button
-                onClick={handleUpgrade}
-                disabled={checkoutLoading}
-                className="l-btn-pricing l-btn-pricing-filled"
-                style={{ cursor: checkoutLoading ? 'wait' : 'pointer' }}
-              >
-                {checkoutLoading ? 'Loading…' : 'Get Pro — $6/mo'}
-              </button>
+              <Link href="/sign-up" className="l-btn-pricing l-btn-pricing-filled">
+                Join the waitlist — it&apos;s free
+              </Link>
+              <div style={{ marginTop: '16px', textAlign: 'left' }}>
+                <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '6px', fontWeight: 500 }}>Get notified when Pro launches:</p>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input
+                    type="email"
+                    value={waitlistEmail}
+                    onChange={e => setWaitlistEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    style={{ flex: 1, padding: '7px 10px', fontSize: '13px', border: '1px solid #e5e7eb', borderRadius: '6px', outline: 'none', minWidth: 0 }}
+                  />
+                  <button
+                    onClick={() => { if (waitlistEmail) setWaitlistSubmitted(true) }}
+                    style={{ padding: '7px 14px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    Notify me
+                  </button>
+                </div>
+                {waitlistSubmitted && (
+                  <p style={{ marginTop: '8px', fontSize: '12px', color: '#059669', fontWeight: 500 }}>✓ You&apos;re on the list! We&apos;ll email you.</p>
+                )}
+              </div>
             </div>
           </div>
-          <p style={{ marginTop: '24px', fontSize: '13px', color: 'var(--gray-400)' }}>🔒 Payments processed securely by Lemon Squeezy. Cancel anytime — no questions asked.</p>
         </div>
       </section>
 

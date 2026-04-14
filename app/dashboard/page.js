@@ -35,7 +35,7 @@ export default function Dashboard() {
   const [lecturesThisMonth, setLecturesThisMonth] = useState(0)
   const [showBanner, setShowBanner] = useState(true)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
-  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [showComingSoon, setShowComingSoon] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const chatBottomRef = useRef(null)
@@ -67,16 +67,6 @@ export default function Dashboard() {
     } catch {
       setUserPlan('free')
     }
-  }
-
-  const handleCheckout = async () => {
-    setCheckoutLoading(true)
-    try {
-      const res = await fetch('/api/checkout', { method: 'POST' })
-      const data = await res.json()
-      if (data.url) window.location.href = data.url
-    } catch { /* fallback */ }
-    finally { setCheckoutLoading(false) }
   }
 
   const fetchPastLectures = async () => {
@@ -262,14 +252,29 @@ export default function Dashboard() {
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             <button
-              onClick={handleCheckout}
-              disabled={checkoutLoading}
+              onClick={() => setShowComingSoon(true)}
               style={{ padding: '5px 12px', background: '#d97706', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
-              {checkoutLoading ? 'Loading…' : 'Upgrade to Pro →'}
+              Upgrade to Pro →
             </button>
             <button onClick={() => setShowBanner(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#92400e', fontSize: '18px', lineHeight: 1, padding: '0 2px' }}>×</button>
           </div>
+        </div>
+      )}
+
+      {/* PADDLE UPGRADE BANNER */}
+      {userPlan !== 'pro' && (
+        <div style={{ background: accent, padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', flexWrap: 'wrap', textAlign: 'center' }}>
+          <p style={{ fontSize: '13px', color: '#fff', fontWeight: 500, margin: 0 }}>
+            You&apos;re on the <strong>Free plan</strong> — 3 lectures/month.{' '}
+            Upgrade to <strong>Pro</strong> for <strong>$9/month</strong> for unlimited lectures, chats, and PDF export.
+          </p>
+          <button
+            onClick={() => setShowComingSoon(true)}
+            style={{ padding: '6px 16px', background: '#fff', color: accent, border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            Upgrade Now
+          </button>
         </div>
       )}
 
@@ -315,13 +320,12 @@ export default function Dashboard() {
             </div>
           ) : userPlan === 'free' ? (
             <button
-              onClick={handleCheckout}
-              disabled={checkoutLoading}
+              onClick={() => setShowComingSoon(true)}
               style={{ width: '100%', padding: '10px 12px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginBottom: '16px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
               <span>🚀</span>
               <div>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700 }}>{checkoutLoading ? 'Loading…' : 'Upgrade to Pro'}</p>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700 }}>Upgrade to Pro</p>
                 <p style={{ margin: 0, fontSize: '11px', opacity: 0.85 }}>$6/mo — unlimited everything</p>
               </div>
             </button>
@@ -706,17 +710,67 @@ export default function Dashboard() {
               ))}
             </div>
             <button
-              onClick={handleCheckout}
-              disabled={checkoutLoading}
+              onClick={() => setShowComingSoon(true)}
               style={{ width: '100%', padding: '14px', background: `linear-gradient(135deg, ${accent}, #7c3aed)`, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '10px', boxShadow: '0 4px 16px rgba(79,70,229,0.3)' }}
             >
-              {checkoutLoading ? 'Loading…' : 'Get Pro — $6/month'}
+              Get Pro — $6/month
             </button>
             <button
               onClick={() => setShowUpgradeModal(false)}
               style={{ width: '100%', padding: '12px', background: 'transparent', border: `1px solid ${gray200}`, borderRadius: '10px', fontSize: '14px', fontWeight: 500, color: gray600, cursor: 'pointer' }}
             >
               Maybe later
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* COMING SOON MODAL */}
+      {showComingSoon && (
+        <div
+          onClick={() => setShowComingSoon(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+            zIndex: 999, display: 'flex', alignItems: 'center',
+            justifyContent: 'center', padding: '20px'
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: '16px', padding: '40px',
+              maxWidth: '400px', width: '100%', textAlign: 'center',
+              position: 'relative', boxShadow: '0 24px 64px rgba(0,0,0,0.2)',
+              animation: 'modalIn .2s ease'
+            }}
+          >
+            <button
+              onClick={() => setShowComingSoon(false)}
+              style={{
+                position: 'absolute', top: '16px', right: '16px',
+                background: 'none', border: 'none', fontSize: '20px',
+                cursor: 'pointer', color: '#9ca3af', lineHeight: 1
+              }}
+            >
+              ×
+            </button>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚀</div>
+            <h2 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '12px', color: '#0a0a0a' }}>
+              Pro Plan Coming Soon
+            </h2>
+            <p style={{ fontSize: '14px', color: '#4b5563', lineHeight: 1.7, marginBottom: '24px' }}>
+              We&apos;re setting up payments. Pro plan will be available very soon —
+              we&apos;ll notify you by email when it launches.
+            </p>
+            <button
+              onClick={() => setShowComingSoon(false)}
+              style={{
+                background: '#4f46e5', color: '#fff', border: 'none',
+                borderRadius: '8px', padding: '10px 28px', fontWeight: 700,
+                fontSize: '14px', cursor: 'pointer'
+              }}
+            >
+              Got it
             </button>
           </div>
         </div>
