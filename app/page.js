@@ -282,10 +282,7 @@ export default function Home() {
             <div className="l-pricing-card featured">
               <div className="l-pricing-badge">MOST POPULAR</div>
               <div className="l-pricing-name">Pro</div>
-              <div className="l-pricing-price" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                <span><sup>$</sup>9<sub>/mo</sub></span>
-                <span style={{ background: '#f3f4f6', color: '#6b7280', fontSize: '11px', padding: '2px 8px', borderRadius: '100px', fontWeight: 500, lineHeight: '1.5' }}>Coming Soon</span>
-              </div>
+              <div className="l-pricing-price"><sup>$</sup>6<sub>/mo</sub></div>
               <p className="l-pricing-desc">For students who rely on LectureAI every week.</p>
               <hr className="l-pricing-divider" />
               <ul className="l-pricing-features">
@@ -347,7 +344,7 @@ export default function Home() {
       </footer>
 
       <Script
-        src={`https://www.paypal.com/sdk/js?client-id=${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}&vault=true&intent=subscription`}
+        src={`https://www.paypal.com/sdk/js?client-id=${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}&vault=true&intent=subscription&enable-funding=card`}
         onLoad={() => setPaypalReady(true)}
       />
     </>

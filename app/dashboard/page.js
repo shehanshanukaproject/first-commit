@@ -2,6 +2,7 @@
 import { UserButton } from '@clerk/nextjs'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import Script from 'next/script'
 
 const accent = '#4f46e5'
 const accentDark = '#3730a3'
@@ -37,9 +38,11 @@ export default function Dashboard() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [upgradeLoading, setUpgradeLoading] = useState(false)
   const [showUpgradeSuccess, setShowUpgradeSuccess] = useState(false)
+  const [paypalReady, setPaypalReady] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const chatBottomRef = useRef(null)
+  const paypalModalRef = useRef(null)
 
   useEffect(() => {
     fetchPastLectures()
@@ -63,6 +66,23 @@ export default function Dashboard() {
   useEffect(() => {
     if (!isMobile) setSidebarOpen(false)
   }, [isMobile])
+
+  // Render PayPal buttons inside upgrade modal whenever it opens
+  useEffect(() => {
+    if (!paypalReady || !showUpgradeModal || !paypalModalRef.current || !window.paypal) return
+    paypalModalRef.current.innerHTML = ''
+    window.paypal.Buttons({
+      style: { shape: 'rect', color: 'blue', layout: 'vertical', label: 'subscribe' },
+      createSubscription: async () => {
+        const res = await fetch('/api/paypal/create-subscription', { method: 'POST' })
+        const data = await res.json()
+        if (data.error) throw new Error(data.error)
+        return data.subscriptionId
+      },
+      onApprove: () => { window.location.href = '/dashboard?upgraded=true' },
+      onError: (err) => { console.error('PayPal error:', err) },
+    }).render(paypalModalRef.current)
+  }, [paypalReady, showUpgradeModal])
 
   const fetchUserPlan = async () => {
     try {
@@ -274,11 +294,10 @@ export default function Dashboard() {
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             <button
-              onClick={handlePayPalUpgrade}
-              disabled={upgradeLoading}
-              style={{ padding: '5px 12px', background: '#d97706', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: upgradeLoading ? 'wait' : 'pointer', whiteSpace: 'nowrap' }}
+              onClick={() => setShowUpgradeModal(true)}
+              style={{ padding: '5px 12px', background: '#d97706', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
-              {upgradeLoading ? 'Redirecting…' : 'Upgrade to Pro →'}
+              Upgrade to Pro →
             </button>
             <button onClick={() => setShowBanner(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#92400e', fontSize: '18px', lineHeight: 1, padding: '0 2px' }}>×</button>
           </div>
@@ -293,11 +312,10 @@ export default function Dashboard() {
             Upgrade to <strong>Pro</strong> for <strong>$9/month</strong> for unlimited lectures, chats, and PDF export.
           </p>
           <button
-            onClick={handlePayPalUpgrade}
-            disabled={upgradeLoading}
-            style={{ padding: '6px 16px', background: '#fff', color: accent, border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 700, cursor: upgradeLoading ? 'wait' : 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+            onClick={() => setShowUpgradeModal(true)}
+            style={{ padding: '6px 16px', background: '#fff', color: accent, border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
           >
-            {upgradeLoading ? 'Redirecting…' : 'Upgrade Now'}
+            Upgrade Now
           </button>
         </div>
       )}
@@ -344,9 +362,8 @@ export default function Dashboard() {
             </div>
           ) : userPlan === 'free' ? (
             <button
-              onClick={handlePayPalUpgrade}
-              disabled={upgradeLoading}
-              style={{ width: '100%', padding: '10px 12px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: upgradeLoading ? 'wait' : 'pointer', marginBottom: '16px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}
+              onClick={() => setShowUpgradeModal(true)}
+              style={{ width: '100%', padding: '10px 12px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginBottom: '16px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
               <span>🚀</span>
               <div>
@@ -734,13 +751,16 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-            <button
-              onClick={handlePayPalUpgrade}
-              disabled={upgradeLoading}
-              style={{ width: '100%', padding: '14px', background: `linear-gradient(135deg, ${accent}, #7c3aed)`, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: 700, cursor: upgradeLoading ? 'wait' : 'pointer', marginBottom: '10px', boxShadow: '0 4px 16px rgba(79,70,229,0.3)' }}
-            >
-              {upgradeLoading ? 'Redirecting to PayPal…' : 'Get Pro — $6/month'}
-            </button>
+            <div ref={paypalModalRef} style={{ marginBottom: '10px' }} />
+            {!paypalReady && (
+              <button
+                onClick={handlePayPalUpgrade}
+                disabled={upgradeLoading}
+                style={{ width: '100%', padding: '14px', background: `linear-gradient(135deg, ${accent}, #7c3aed)`, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: 700, cursor: upgradeLoading ? 'wait' : 'pointer', marginBottom: '10px', boxShadow: '0 4px 16px rgba(79,70,229,0.3)' }}
+              >
+                {upgradeLoading ? 'Redirecting to PayPal…' : 'Get Pro — $6/month'}
+              </button>
+            )}
             <button
               onClick={() => setShowUpgradeModal(false)}
               style={{ width: '100%', padding: '12px', background: 'transparent', border: `1px solid ${gray200}`, borderRadius: '10px', fontSize: '14px', fontWeight: 500, color: gray600, cursor: 'pointer' }}
@@ -761,6 +781,11 @@ export default function Dashboard() {
           <button onClick={() => setShowUpgradeSuccess(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#065f46', fontSize: '18px', lineHeight: 1, padding: '0 2px' }}>×</button>
         </div>
       )}
+
+      <Script
+        src={`https://www.paypal.com/sdk/js?client-id=${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}&vault=true&intent=subscription&enable-funding=card`}
+        onLoad={() => setPaypalReady(true)}
+      />
     </div>
   )
 }
