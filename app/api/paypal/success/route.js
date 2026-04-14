@@ -9,6 +9,7 @@ export async function GET(request) {
     const subscriptionId = searchParams.get('subscription_id') || searchParams.get('token')
 
     if (!subscriptionId) {
+      console.warn('[PayPal success] No subscription_id in URL — redirecting to dashboard')
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
@@ -19,21 +20,43 @@ export async function GET(request) {
     })
     const subscription = await res.json()
 
-    // Prefer custom_id (set to Clerk userId at creation) over session
+    console.log(`[PayPal success] subscription_id=${subscriptionId} status=${subscription.status} custom_id=${subscription.custom_id}`)
+
+    // Prefer custom_id (set to Clerk userId at creation) over active session
     const { userId: sessionUserId } = await auth()
     const userId = subscription.custom_id || sessionUserId
 
-    if (userId && ['ACTIVE', 'APPROVED'].includes(subscription.status)) {
+    if (!userId) {
+      console.error('[PayPal success] No userId found — cannot update plan')
+      return NextResponse.redirect(new URL('/dashboard?upgraded=true', request.url))
+    }
+
+    // Accept any status that means the user has agreed to pay:
+    // APPROVAL_PENDING, APPROVED, ACTIVE are all valid post-approval states
+    const validStatuses = ['ACTIVE', 'APPROVED', 'APPROVAL_PENDING']
+    if (validStatuses.includes(subscription.status)) {
       const supabase = getSupabaseServer()
-      await supabase.from('user_plans').upsert(
-        { user_id: userId, plan: 'pro', lemon_order_id: subscriptionId, updated_at: new Date().toISOString() },
+      const { error: upsertError } = await supabase.from('user_plans').upsert(
+        {
+          user_id: userId,
+          plan: 'pro',
+          lemon_order_id: subscriptionId,
+          updated_at: new Date().toISOString(),
+        },
         { onConflict: 'user_id' }
       )
+      if (upsertError) {
+        console.error('[PayPal success] Supabase upsert failed:', upsertError)
+      } else {
+        console.log(`[PayPal success] User ${userId} upgraded to pro ✅`)
+      }
+    } else {
+      console.warn(`[PayPal success] Unexpected subscription status: ${subscription.status} — skipping DB update`)
     }
 
     return NextResponse.redirect(new URL('/dashboard?upgraded=true', request.url))
   } catch (err) {
-    console.error('PayPal success error:', err)
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    console.error('[PayPal success] Unhandled error:', err)
+    return NextResponse.redirect(new URL('/dashboard?upgraded=true', request.url))
   }
 }
