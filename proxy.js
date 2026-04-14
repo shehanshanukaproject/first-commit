@@ -9,6 +9,8 @@ const isPublicRoute = createRouteMatcher([
   '/privacy',
   '/refund',
   '/success',
+  '/api/paypal(.*)',
+  '/api/webhooks(.*)',
 ])
 
 export default clerkMiddleware(async (auth, request) => {
