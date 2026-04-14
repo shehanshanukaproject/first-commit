@@ -270,14 +270,67 @@ body {
 .l-footer-links a { font-size: 13px; color: var(--gray-400); text-decoration: none; }
 .l-footer-links a:hover { color: var(--white); }
 
-/* RESPONSIVE */
+/* RESPONSIVE — Tablet */
+@media (max-width: 1023px) {
+  .l-features-grid { grid-template-columns: repeat(2, 1fr); }
+  .l-testimonials-grid { grid-template-columns: repeat(2, 1fr); }
+  .l-pricing-grid { grid-template-columns: repeat(2, 1fr); max-width: 100%; }
+  .l-security-grid { grid-template-columns: repeat(2, 1fr); }
+  .l-steps-grid { grid-template-columns: repeat(2, 1fr); }
+  .l-section-inner { padding: 0 8px; }
+}
+
+/* RESPONSIVE — Mobile */
 @media (max-width: 640px) {
   .l-nav { padding: 0 16px; }
-  .l-hero { padding: 100px 16px 60px; }
-  .l-section { padding: 64px 16px; }
-  .l-stats-grid { gap: 32px; }
-  .l-hero-ctas { flex-direction: column; align-items: center; }
-  .l-btn-hero, .l-btn-hero-outline { width: 100%; max-width: 320px; text-align: center; }
-  .l-trust-bar { gap: 20px; }
   .l-nav-links .l-btn-ghost { display: none; }
+  .l-nav-links { gap: 6px; }
+
+  .l-hero { padding: 100px 16px 56px; }
+  .l-hero h1 { font-size: 34px; letter-spacing: -1px; }
+  .l-hero p { font-size: 16px; }
+  .l-hero-ctas { flex-direction: column; align-items: center; }
+  .l-btn-hero, .l-btn-hero-outline { width: 100%; max-width: 340px; text-align: center; }
+
+  .l-trust-bar { gap: 16px; padding: 16px; }
+  .l-trust-item { font-size: 12px; }
+
+  .l-stats { padding: 52px 16px; }
+  .l-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 32px; }
+  .l-stat-number { font-size: 40px; }
+
+  .l-section { padding: 56px 16px; }
+  .l-section-title { font-size: 26px; letter-spacing: -0.5px; }
+  .l-section-sub { font-size: 15px; }
+
+  .l-steps-grid { grid-template-columns: 1fr; gap: 16px; }
+  .l-step-card { padding: 24px 20px; }
+
+  .l-demo-body { padding: 20px 16px; }
+  .l-demo-code { font-size: 11px; word-break: break-all; }
+
+  .l-features-grid { grid-template-columns: 1fr; gap: 16px; }
+  .l-feature-card { padding: 24px 20px; }
+
+  .l-testimonials-grid { grid-template-columns: 1fr; }
+
+  .l-security-grid { grid-template-columns: 1fr; }
+  .l-security-card { padding: 18px 16px; }
+
+  .l-pricing-grid { grid-template-columns: 1fr; max-width: 400px; margin-left: auto; margin-right: auto; }
+  .l-pricing-card { padding: 28px 24px; }
+
+  .l-faq-list { margin-top: 36px; }
+  .l-faq-question { padding: 16px 18px; font-size: 14px; }
+  .l-faq-answer { padding: 0 18px; }
+  .l-faq-item.open .l-faq-answer { padding: 0 18px 16px; }
+
+  .l-cta { padding: 64px 16px; }
+  .l-cta h2 { font-size: 28px; }
+  .l-cta p { font-size: 15px; }
+
+  .l-footer { padding: 28px 16px; }
+  .l-footer-links { flex-wrap: wrap; gap: 16px; justify-content: center; }
+
+  .l-btn-pricing { padding: 13px; }
 }

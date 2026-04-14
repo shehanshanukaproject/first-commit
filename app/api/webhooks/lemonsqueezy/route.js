@@ -32,7 +32,7 @@ export async function POST(request) {
 
       // Only activate Pro for paid/active orders
       const isActive =
-        status === 'paid' || status === 'active' || status === 'on_trial'
+        status === 'paid' || status === 'active'
 
       if (userId && isActive) {
         const supabase = getSupabaseServer()

@@ -106,14 +106,32 @@ export default function PdfPage() {
 
   return (
     <div style={{ minHeight: '100vh', fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", background: '#fff', display: 'flex', flexDirection: 'column' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .pdf-nav-label { display: none !important; }
+          .pdf-nav-sep { display: none !important; }
+          .pdf-main { padding: 16px 14px !important; gap: 16px !important; }
+          .pdf-dropzone { padding: 32px 16px !important; }
+          .pdf-chat { min-height: 360px !important; }
+          .pdf-messages { min-height: 240px !important; padding: 14px 12px !important; }
+          .pdf-input-row { padding: 10px 10px !important; gap: 6px !important; }
+          .pdf-send-btn { padding: 10px 12px !important; font-size: 13px !important; }
+          .pdf-upload-heading { font-size: 22px !important; }
+          .pdf-info-bar { padding: 12px 14px !important; }
+        }
+        @media (min-width: 641px) and (max-width: 1023px) {
+          .pdf-main { padding: 24px 20px !important; }
+          .pdf-dropzone { padding: 40px 20px !important; }
+        }
+      `}</style>
       {/* NAV */}
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 24px', height: '64px', borderBottom: `1px solid ${gray200}`, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <Link href="/dashboard" style={{ fontSize: '18px', fontWeight: 800, color: '#0a0a0a', textDecoration: 'none' }}>
             Lecture<span style={{ color: accent }}>AI</span>
           </Link>
-          <span style={{ color: gray200 }}>|</span>
-          <span style={{ fontSize: '14px', fontWeight: 600, color: accent }}>PDF Analyzer</span>
+          <span className="pdf-nav-sep" style={{ color: gray200 }}>|</span>
+          <span className="pdf-nav-label" style={{ fontSize: '14px', fontWeight: 600, color: accent }}>PDF Analyzer</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Link href="/dashboard" style={{ fontSize: '13px', color: gray600, textDecoration: 'none', padding: '6px 12px', borderRadius: '6px', border: `1px solid ${gray200}` }}>
@@ -123,14 +141,14 @@ export default function PdfPage() {
         </div>
       </nav>
 
-      <div style={{ flex: 1, maxWidth: '960px', width: '100%', margin: '0 auto', padding: '32px 20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div className="pdf-main" style={{ flex: 1, maxWidth: '960px', width: '100%', margin: '0 auto', padding: '32px 20px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
         {/* UPLOAD STATE */}
         {status === 'idle' && (
           <div style={{ maxWidth: '560px', margin: '0 auto', width: '100%', paddingTop: '24px' }}>
             <div style={{ textAlign: 'center', marginBottom: '32px' }}>
               <div style={{ width: '56px', height: '56px', background: accentLight, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', margin: '0 auto 16px' }}>📄</div>
-              <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#0a0a0a', marginBottom: '8px', letterSpacing: '-0.5px' }}>PDF Analyzer</h1>
+              <h1 className="pdf-upload-heading" style={{ fontSize: '26px', fontWeight: 800, color: '#0a0a0a', marginBottom: '8px', letterSpacing: '-0.5px' }}>PDF Analyzer</h1>
               <p style={{ fontSize: '15px', color: gray600 }}>Upload a PDF and ask questions about it using AI</p>
             </div>
 
@@ -139,6 +157,7 @@ export default function PdfPage() {
               onDrop={handleDrop}
               onDragOver={(e) => e.preventDefault()}
               onClick={() => fileInputRef.current?.click()}
+              className="pdf-dropzone"
               style={{ border: `2px dashed ${file ? accent : gray200}`, borderRadius: '14px', padding: '48px 24px', textAlign: 'center', cursor: 'pointer', background: file ? accentLight : gray50, transition: 'all 0.2s', marginBottom: '16px' }}
             >
               {file ? (
@@ -190,7 +209,7 @@ export default function PdfPage() {
         {status === 'ready' && pdfMeta && (
           <>
             {/* PDF info bar */}
-            <div style={{ background: accentLight, border: `1px solid ${accent}20`, borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+            <div className="pdf-info-bar" style={{ background: accentLight, border: `1px solid ${accent}20`, borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <span style={{ fontSize: '22px' }}>📄</span>
                 <div>
@@ -210,7 +229,7 @@ export default function PdfPage() {
             )}
 
             {/* Chat */}
-            <div style={{ border: `1px solid ${gray200}`, borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '480px' }}>
+            <div className="pdf-chat" style={{ border: `1px solid ${gray200}`, borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: '480px' }}>
               {/* Chat header */}
               <div style={{ padding: '14px 18px', background: gray50, borderBottom: `1px solid ${gray200}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span style={{ width: '8px', height: '8px', background: accent, borderRadius: '50%', animation: 'pulse 2s ease-in-out infinite', display: 'inline-block' }} />
@@ -222,7 +241,7 @@ export default function PdfPage() {
               </div>
 
               {/* Messages */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: '14px', minHeight: '320px' }}>
+              <div className="pdf-messages" style={{ flex: 1, overflowY: 'auto', padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: '14px', minHeight: '320px' }}>
                 {messages.length === 0 && (
                   <div style={{ textAlign: 'center', paddingTop: '32px', color: gray400 }}>
                     <p style={{ fontSize: '32px', marginBottom: '10px' }}>💬</p>
@@ -276,7 +295,7 @@ export default function PdfPage() {
               </div>
 
               {/* Input row */}
-              <div style={{ padding: '12px 14px', borderTop: `1px solid ${gray200}`, display: 'flex', gap: '8px', background: '#fff' }}>
+              <div className="pdf-input-row" style={{ padding: '12px 14px', borderTop: `1px solid ${gray200}`, display: 'flex', gap: '8px', background: '#fff' }}>
                 <input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -288,6 +307,7 @@ export default function PdfPage() {
                 <button
                   onClick={sendMessage}
                   disabled={!input.trim() || chatLoading}
+                  className="pdf-send-btn"
                   style={{ padding: '10px 18px', background: input.trim() && !chatLoading ? accent : gray200, color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 600, cursor: input.trim() && !chatLoading ? 'pointer' : 'not-allowed', transition: 'background 0.2s', whiteSpace: 'nowrap' }}
                 >
                   Send
