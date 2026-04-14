@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
-import { useState } from 'react'
+import Script from 'next/script'
+import { useState, useEffect, useRef } from 'react'
 import './landing.css'
 
 const faqs = [
@@ -48,8 +49,25 @@ const faqs = [
 
 export default function Home() {
   const [openFaq, setOpenFaq] = useState(null)
-  const [waitlistEmail, setWaitlistEmail] = useState('')
-  const [waitlistSubmitted, setWaitlistSubmitted] = useState(false)
+  const [paypalReady, setPaypalReady] = useState(false)
+  const paypalContainerRef = useRef(null)
+
+  useEffect(() => {
+    if (!paypalReady || !paypalContainerRef.current || !window.paypal) return
+    paypalContainerRef.current.innerHTML = ''
+    window.paypal.Buttons({
+      style: { shape: 'rect', color: 'blue', layout: 'vertical', label: 'subscribe' },
+      createSubscription: async () => {
+        const res = await fetch('/api/paypal/create-subscription', { method: 'POST' })
+        if (res.status === 401) { window.location.href = '/sign-up'; return }
+        const data = await res.json()
+        if (data.error) throw new Error(data.error)
+        return data.subscriptionId
+      },
+      onApprove: () => { window.location.href = '/dashboard?upgraded=true' },
+      onError: (err) => { console.error('PayPal error:', err) },
+    }).render(paypalContainerRef.current)
+  }, [paypalReady])
 
   return (
     <>
@@ -279,30 +297,12 @@ export default function Home() {
                 <li><span className="check">✓</span> PDF export</li>
                 <li><span className="check">✓</span> Priority processing</li>
               </ul>
-              <Link href="/sign-up" className="l-btn-pricing l-btn-pricing-filled">
-                Join the waitlist — it&apos;s free
-              </Link>
-              <div style={{ marginTop: '16px', textAlign: 'left' }}>
-                <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '6px', fontWeight: 500 }}>Get notified when Pro launches:</p>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <input
-                    type="email"
-                    value={waitlistEmail}
-                    onChange={e => setWaitlistEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    style={{ flex: 1, padding: '7px 10px', fontSize: '13px', border: '1px solid #e5e7eb', borderRadius: '6px', outline: 'none', minWidth: 0 }}
-                  />
-                  <button
-                    onClick={() => { if (waitlistEmail) setWaitlistSubmitted(true) }}
-                    style={{ padding: '7px 14px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                  >
-                    Notify me
-                  </button>
-                </div>
-                {waitlistSubmitted && (
-                  <p style={{ marginTop: '8px', fontSize: '12px', color: '#059669', fontWeight: 500 }}>✓ You&apos;re on the list! We&apos;ll email you.</p>
-                )}
-              </div>
+              <div ref={paypalContainerRef} style={{ marginTop: '8px' }} />
+              {!paypalReady && (
+                <Link href="/sign-up" className="l-btn-pricing l-btn-pricing-filled">
+                  Get Pro — $6/month
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -345,6 +345,11 @@ export default function Home() {
         </div>
         <p>© 2026 LectureAI. Built for students everywhere.</p>
       </footer>
+
+      <Script
+        src={`https://www.paypal.com/sdk/js?client-id=${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}&vault=true&intent=subscription`}
+        onLoad={() => setPaypalReady(true)}
+      />
     </>
   )
 }

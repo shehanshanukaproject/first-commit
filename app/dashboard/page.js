@@ -35,7 +35,8 @@ export default function Dashboard() {
   const [lecturesThisMonth, setLecturesThisMonth] = useState(0)
   const [showBanner, setShowBanner] = useState(true)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
-  const [showComingSoon, setShowComingSoon] = useState(false)
+  const [upgradeLoading, setUpgradeLoading] = useState(false)
+  const [showUpgradeSuccess, setShowUpgradeSuccess] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const chatBottomRef = useRef(null)
@@ -46,6 +47,11 @@ export default function Dashboard() {
     const check = () => setIsMobile(window.innerWidth < 768)
     check()
     window.addEventListener('resize', check)
+    if (window.location.search.includes('upgraded=true')) {
+      setShowUpgradeSuccess(true)
+      fetchUserPlan()
+      window.history.replaceState({}, '', '/dashboard')
+    }
     return () => window.removeEventListener('resize', check)
   }, [])
 
@@ -66,6 +72,22 @@ export default function Dashboard() {
       setLecturesThisMonth(data.lecturesThisMonth || 0)
     } catch {
       setUserPlan('free')
+    }
+  }
+
+  const handlePayPalUpgrade = async () => {
+    setUpgradeLoading(true)
+    try {
+      const res = await fetch('/api/paypal/create-subscription', { method: 'POST' })
+      const data = await res.json()
+      if (data.approvalUrl) {
+        window.location.href = data.approvalUrl
+      } else {
+        throw new Error(data.error || 'Failed to start checkout')
+      }
+    } catch (err) {
+      setError(err.message)
+      setUpgradeLoading(false)
     }
   }
 
@@ -252,10 +274,11 @@ export default function Dashboard() {
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
             <button
-              onClick={() => setShowComingSoon(true)}
-              style={{ padding: '5px 12px', background: '#d97706', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              onClick={handlePayPalUpgrade}
+              disabled={upgradeLoading}
+              style={{ padding: '5px 12px', background: '#d97706', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: upgradeLoading ? 'wait' : 'pointer', whiteSpace: 'nowrap' }}
             >
-              Upgrade to Pro →
+              {upgradeLoading ? 'Redirecting…' : 'Upgrade to Pro →'}
             </button>
             <button onClick={() => setShowBanner(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#92400e', fontSize: '18px', lineHeight: 1, padding: '0 2px' }}>×</button>
           </div>
@@ -270,10 +293,11 @@ export default function Dashboard() {
             Upgrade to <strong>Pro</strong> for <strong>$9/month</strong> for unlimited lectures, chats, and PDF export.
           </p>
           <button
-            onClick={() => setShowComingSoon(true)}
-            style={{ padding: '6px 16px', background: '#fff', color: accent, border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+            onClick={handlePayPalUpgrade}
+            disabled={upgradeLoading}
+            style={{ padding: '6px 16px', background: '#fff', color: accent, border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 700, cursor: upgradeLoading ? 'wait' : 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
           >
-            Upgrade Now
+            {upgradeLoading ? 'Redirecting…' : 'Upgrade Now'}
           </button>
         </div>
       )}
@@ -320,8 +344,9 @@ export default function Dashboard() {
             </div>
           ) : userPlan === 'free' ? (
             <button
-              onClick={() => setShowComingSoon(true)}
-              style={{ width: '100%', padding: '10px 12px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginBottom: '16px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}
+              onClick={handlePayPalUpgrade}
+              disabled={upgradeLoading}
+              style={{ width: '100%', padding: '10px 12px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: upgradeLoading ? 'wait' : 'pointer', marginBottom: '16px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
               <span>🚀</span>
               <div>
@@ -710,10 +735,11 @@ export default function Dashboard() {
               ))}
             </div>
             <button
-              onClick={() => setShowComingSoon(true)}
-              style={{ width: '100%', padding: '14px', background: `linear-gradient(135deg, ${accent}, #7c3aed)`, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', marginBottom: '10px', boxShadow: '0 4px 16px rgba(79,70,229,0.3)' }}
+              onClick={handlePayPalUpgrade}
+              disabled={upgradeLoading}
+              style={{ width: '100%', padding: '14px', background: `linear-gradient(135deg, ${accent}, #7c3aed)`, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: 700, cursor: upgradeLoading ? 'wait' : 'pointer', marginBottom: '10px', boxShadow: '0 4px 16px rgba(79,70,229,0.3)' }}
             >
-              Get Pro — $6/month
+              {upgradeLoading ? 'Redirecting to PayPal…' : 'Get Pro — $6/month'}
             </button>
             <button
               onClick={() => setShowUpgradeModal(false)}
@@ -725,54 +751,14 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* COMING SOON MODAL */}
-      {showComingSoon && (
-        <div
-          onClick={() => setShowComingSoon(false)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-            zIndex: 999, display: 'flex', alignItems: 'center',
-            justifyContent: 'center', padding: '20px'
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: '#fff', borderRadius: '16px', padding: '40px',
-              maxWidth: '400px', width: '100%', textAlign: 'center',
-              position: 'relative', boxShadow: '0 24px 64px rgba(0,0,0,0.2)',
-              animation: 'modalIn .2s ease'
-            }}
-          >
-            <button
-              onClick={() => setShowComingSoon(false)}
-              style={{
-                position: 'absolute', top: '16px', right: '16px',
-                background: 'none', border: 'none', fontSize: '20px',
-                cursor: 'pointer', color: '#9ca3af', lineHeight: 1
-              }}
-            >
-              ×
-            </button>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚀</div>
-            <h2 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '12px', color: '#0a0a0a' }}>
-              Pro Plan Coming Soon
-            </h2>
-            <p style={{ fontSize: '14px', color: '#4b5563', lineHeight: 1.7, marginBottom: '24px' }}>
-              We&apos;re setting up payments. Pro plan will be available very soon —
-              we&apos;ll notify you by email when it launches.
-            </p>
-            <button
-              onClick={() => setShowComingSoon(false)}
-              style={{
-                background: '#4f46e5', color: '#fff', border: 'none',
-                borderRadius: '8px', padding: '10px 28px', fontWeight: 700,
-                fontSize: '14px', cursor: 'pointer'
-              }}
-            >
-              Got it
-            </button>
-          </div>
+      {/* UPGRADE SUCCESS BANNER */}
+      {showUpgradeSuccess && (
+        <div style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', background: '#ecfdf5', border: '1px solid #6ee7b7', borderRadius: '12px', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', zIndex: 999, maxWidth: '480px', width: 'calc(100% - 32px)' }}>
+          <span style={{ fontSize: '20px' }}>🎉</span>
+          <p style={{ margin: 0, fontSize: '14px', color: '#065f46', fontWeight: 600, flex: 1 }}>
+            You&apos;re now on Pro! Unlimited lectures, AI chat, and PDF export unlocked.
+          </p>
+          <button onClick={() => setShowUpgradeSuccess(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#065f46', fontSize: '18px', lineHeight: 1, padding: '0 2px' }}>×</button>
         </div>
       )}
     </div>
