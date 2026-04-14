@@ -37,6 +37,7 @@ export default function Dashboard() {
   const [showBanner, setShowBanner] = useState(true)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [upgradeLoading, setUpgradeLoading] = useState(false)
+  const [upgradeError, setUpgradeError] = useState('')
   const [showUpgradeSuccess, setShowUpgradeSuccess] = useState(false)
   const [paypalReady, setPaypalReady] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -80,7 +81,10 @@ export default function Dashboard() {
         return data.subscriptionId
       },
       onApprove: () => { window.location.href = '/dashboard?upgraded=true' },
-      onError: (err) => { console.error('PayPal error:', err) },
+      onError: (err) => {
+        console.error('[PayPal] button error:', err)
+        setUpgradeError('PayPal encountered an error. Please use the button below instead.')
+      },
     }).render(paypalModalRef.current)
   }, [paypalReady, showUpgradeModal])
 
@@ -96,17 +100,20 @@ export default function Dashboard() {
   }
 
   const handlePayPalUpgrade = async () => {
+    setUpgradeError('')
     setUpgradeLoading(true)
     try {
       const res = await fetch('/api/paypal/create-subscription', { method: 'POST' })
       const data = await res.json()
+      console.log('[PayPal] create-subscription response:', data)
       if (data.approvalUrl) {
         window.location.href = data.approvalUrl
       } else {
-        throw new Error(data.error || 'Failed to start checkout')
+        throw new Error(data.error || 'No redirect URL returned from PayPal')
       }
     } catch (err) {
-      setError(err.message)
+      console.error('[PayPal] upgrade error:', err.message)
+      setUpgradeError(err.message)
       setUpgradeLoading(false)
     }
   }
@@ -309,7 +316,7 @@ export default function Dashboard() {
         <div style={{ background: accent, padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', flexWrap: 'wrap', textAlign: 'center' }}>
           <p style={{ fontSize: '13px', color: '#fff', fontWeight: 500, margin: 0 }}>
             You&apos;re on the <strong>Free plan</strong> — 3 lectures/month.{' '}
-            Upgrade to <strong>Pro</strong> for <strong>$9/month</strong> for unlimited lectures, chats, and PDF export.
+            Upgrade to <strong>Pro</strong> for <strong>$6/month</strong> for unlimited lectures, chats, and PDF export.
           </p>
           <button
             onClick={() => setShowUpgradeModal(true)}
@@ -751,18 +758,23 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-            <div ref={paypalModalRef} style={{ marginBottom: '10px' }} />
-            {!paypalReady && (
-              <button
-                onClick={handlePayPalUpgrade}
-                disabled={upgradeLoading}
-                style={{ width: '100%', padding: '14px', background: `linear-gradient(135deg, ${accent}, #7c3aed)`, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: 700, cursor: upgradeLoading ? 'wait' : 'pointer', marginBottom: '10px', boxShadow: '0 4px 16px rgba(79,70,229,0.3)' }}
-              >
-                {upgradeLoading ? 'Redirecting to PayPal…' : 'Get Pro — $6/month'}
-              </button>
+            {/* PayPal JS SDK buttons (card + PayPal) — renders when SDK loads */}
+            <div ref={paypalModalRef} style={{ marginBottom: paypalReady ? '10px' : '0' }} />
+            {/* Direct redirect button — always visible, guaranteed to work */}
+            <button
+              onClick={handlePayPalUpgrade}
+              disabled={upgradeLoading}
+              style={{ width: '100%', padding: '14px', background: `linear-gradient(135deg, ${accent}, #7c3aed)`, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: 700, cursor: upgradeLoading ? 'wait' : 'pointer', marginBottom: '10px', boxShadow: '0 4px 16px rgba(79,70,229,0.3)' }}
+            >
+              {upgradeLoading ? 'Redirecting to PayPal…' : 'Get Pro — $6/month'}
+            </button>
+            {upgradeError && (
+              <p style={{ fontSize: '13px', color: '#dc2626', marginBottom: '10px', textAlign: 'center' }}>
+                ⚠️ {upgradeError}
+              </p>
             )}
             <button
-              onClick={() => setShowUpgradeModal(false)}
+              onClick={() => { setShowUpgradeModal(false); setUpgradeError('') }}
               style={{ width: '100%', padding: '12px', background: 'transparent', border: `1px solid ${gray200}`, borderRadius: '10px', fontSize: '14px', fontWeight: 500, color: gray600, cursor: 'pointer' }}
             >
               Maybe later

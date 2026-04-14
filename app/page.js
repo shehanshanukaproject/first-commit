@@ -1,7 +1,6 @@
 'use client'
 import Link from 'next/link'
-import Script from 'next/script'
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import './landing.css'
 
 const faqs = [
@@ -49,25 +48,27 @@ const faqs = [
 
 export default function Home() {
   const [openFaq, setOpenFaq] = useState(null)
-  const [paypalReady, setPaypalReady] = useState(false)
-  const paypalContainerRef = useRef(null)
+  const [proLoading, setProLoading] = useState(false)
+  const [proError, setProError] = useState('')
 
-  useEffect(() => {
-    if (!paypalReady || !paypalContainerRef.current || !window.paypal) return
-    paypalContainerRef.current.innerHTML = ''
-    window.paypal.Buttons({
-      style: { shape: 'rect', color: 'blue', layout: 'vertical', label: 'subscribe' },
-      createSubscription: async () => {
-        const res = await fetch('/api/paypal/create-subscription', { method: 'POST' })
-        if (res.status === 401) { window.location.href = '/sign-up'; return }
-        const data = await res.json()
-        if (data.error) throw new Error(data.error)
-        return data.subscriptionId
-      },
-      onApprove: () => { window.location.href = '/dashboard?upgraded=true' },
-      onError: (err) => { console.error('PayPal error:', err) },
-    }).render(paypalContainerRef.current)
-  }, [paypalReady])
+  const handleGetPro = async () => {
+    setProError('')
+    setProLoading(true)
+    try {
+      const res = await fetch('/api/paypal/create-subscription', { method: 'POST' })
+      const data = await res.json()
+      if (res.status === 401) { window.location.href = '/sign-in'; return }
+      if (data.error) throw new Error(data.error)
+      if (data.approvalUrl) {
+        window.location.href = data.approvalUrl
+      } else {
+        throw new Error('No redirect URL returned. Please try again.')
+      }
+    } catch (err) {
+      setProError(err.message)
+      setProLoading(false)
+    }
+  }
 
   return (
     <>
@@ -294,11 +295,18 @@ export default function Home() {
                 <li><span className="check">✓</span> PDF export</li>
                 <li><span className="check">✓</span> Priority processing</li>
               </ul>
-              <div ref={paypalContainerRef} style={{ marginTop: '8px' }} />
-              {!paypalReady && (
-                <Link href="/sign-up" className="l-btn-pricing l-btn-pricing-filled">
-                  Get Pro — $6/month
-                </Link>
+              <button
+                onClick={handleGetPro}
+                disabled={proLoading}
+                className="l-btn-pricing l-btn-pricing-filled"
+                style={{ cursor: proLoading ? 'wait' : 'pointer', opacity: proLoading ? 0.8 : 1, border: 'none', width: '100%' }}
+              >
+                {proLoading ? 'Redirecting to PayPal…' : 'Get Pro — $6/month'}
+              </button>
+              {proError && (
+                <p style={{ marginTop: '10px', fontSize: '13px', color: '#dc2626', textAlign: 'center' }}>
+                  ⚠️ {proError}
+                </p>
               )}
             </div>
           </div>
@@ -343,10 +351,6 @@ export default function Home() {
         <p>© 2026 LectureAI. Built for students everywhere.</p>
       </footer>
 
-      <Script
-        src={`https://www.paypal.com/sdk/js?client-id=${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}&vault=true&intent=subscription&enable-funding=card`}
-        onLoad={() => setPaypalReady(true)}
-      />
     </>
   )
 }

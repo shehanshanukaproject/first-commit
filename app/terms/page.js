@@ -205,7 +205,7 @@ export default function TermsPage() {
         </p>
         <ul style={styles.ul}>
           <li style={styles.li}><strong>Free Plan:</strong> Up to 3 lecture uploads per calendar month, with access to core transcription and note generation features.</li>
-          <li style={styles.li}><strong>Pro Plan:</strong> Unlimited lecture uploads, unlimited AI chat, PDF Analyzer, Practice Quiz generation, and priority processing, billed at $9 USD per month.</li>
+          <li style={styles.li}><strong>Pro Plan:</strong> Unlimited lecture uploads, unlimited AI chat, PDF Analyzer, Practice Quiz generation, and priority processing, billed at $6 USD per month.</li>
         </ul>
         <p style={styles.p}>
           Payments for the Pro Plan are processed securely by Lemon Squeezy, our payment provider. By subscribing,
