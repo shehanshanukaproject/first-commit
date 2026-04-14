@@ -336,9 +336,10 @@ export default function Home() {
       {/* FOOTER */}
       <footer className="l-footer">
         <div className="l-footer-links">
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Service</a>
-          <a href="#">Contact</a>
+          <Link href="/privacy">Privacy Policy</Link>
+          <Link href="/terms">Terms of Service</Link>
+          <Link href="/refund">Refund Policy</Link>
+          <a href="mailto:support@lectureai.cc">Contact</a>
         </div>
         <p>© 2026 LectureAI. Built for students everywhere.</p>
       </footer>
