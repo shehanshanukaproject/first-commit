@@ -27,6 +27,10 @@ export default function Dashboard() {
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
   const [activeLectureId, setActiveLectureId] = useState(null)
+  const [quiz, setQuiz] = useState(null)
+  const [quizLoading, setQuizLoading] = useState(false)
+  const [quizAnswers, setQuizAnswers] = useState({})
+  const [quizSubmitted, setQuizSubmitted] = useState(false)
   const chatBottomRef = useRef(null)
 
   useEffect(() => { fetchPastLectures() }, [])
@@ -99,7 +103,34 @@ export default function Dashboard() {
     setNotes(null); setTranscript(''); setFile(null)
     setStatus('idle'); setError(''); setMessages([])
     setActiveTab('notes'); setActiveLectureId(null)
+    setQuiz(null); setQuizAnswers({}); setQuizSubmitted(false)
   }
+
+  const generateQuiz = async () => {
+    if (!transcript || quizLoading) return
+    setQuizLoading(true)
+    setQuiz(null)
+    setQuizAnswers({})
+    setQuizSubmitted(false)
+    try {
+      const res = await fetch('/api/generate-quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript })
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setQuiz(data.questions)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setQuizLoading(false)
+    }
+  }
+
+  const quizScore = quiz
+    ? quiz.filter((q, i) => quizAnswers[i] === q.answer).length
+    : 0
 
   const sendMessage = async () => {
     if (!chatInput.trim() || chatLoading) return
@@ -154,6 +185,11 @@ export default function Dashboard() {
             + New lecture
           </button>
 
+          {/* PDF Analyzer link */}
+          <Link href="/pdf" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px', borderRadius: '8px', background: '#fdf4ff', border: '1px solid #e9d5ff', textDecoration: 'none', marginBottom: '16px', fontSize: '13px', fontWeight: 600, color: '#7c3aed' }}>
+            <span>📄</span> PDF Analyzer
+          </Link>
+
           <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: gray400, marginBottom: '10px', paddingLeft: '4px' }}>
             Past lectures
           </div>
@@ -196,7 +232,7 @@ export default function Dashboard() {
               <h2 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-1px', marginBottom: '10px', color: '#0a0a0a' }}>
                 Upload your lecture
               </h2>
-              <p style={{ fontSize: '15px', color: gray600, marginBottom: '36px' }}>Supports MP3, MP4, WAV, M4A — max 25MB</p>
+              <p style={{ fontSize: '15px', color: gray600, marginBottom: '36px' }}>Supports MP3, MP4, WAV, M4A — up to 200MB</p>
 
               <div
                 onClick={() => document.getElementById('fileInput').click()}
@@ -281,13 +317,13 @@ export default function Dashboard() {
 
               {/* Tabs */}
               <div style={{ display: 'flex', gap: '4px', borderBottom: `1px solid ${gray200}`, marginBottom: '28px' }}>
-                {['notes', 'chat'].map(tab => (
+                {['notes', 'chat', 'quiz'].map(tab => (
                   <button
                     key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    style={{ padding: '10px 22px', border: 'none', background: 'transparent', fontSize: '14px', fontWeight: activeTab === tab ? 700 : 500, color: activeTab === tab ? accent : gray600, cursor: 'pointer', borderBottom: activeTab === tab ? `2px solid ${accent}` : '2px solid transparent', marginBottom: '-1px', transition: 'all .15s', textTransform: 'capitalize' }}
+                    onClick={() => { setActiveTab(tab); if (tab === 'quiz' && !quiz && !quizLoading) generateQuiz() }}
+                    style={{ padding: '10px 22px', border: 'none', background: 'transparent', fontSize: '14px', fontWeight: activeTab === tab ? 700 : 500, color: activeTab === tab ? accent : gray600, cursor: 'pointer', borderBottom: activeTab === tab ? `2px solid ${accent}` : '2px solid transparent', marginBottom: '-1px', transition: 'all .15s' }}
                   >
-                    {tab === 'notes' ? '📝 Notes' : '💬 Chat'}
+                    {tab === 'notes' ? '📝 Notes' : tab === 'chat' ? '💬 Chat' : '🧠 Quiz'}
                   </button>
                 ))}
               </div>
@@ -416,6 +452,133 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
+              {/* QUIZ TAB */}
+              {activeTab === 'quiz' && (
+                <div>
+                  {quizLoading && (
+                    <div style={{ textAlign: 'center', paddingTop: '60px' }}>
+                      <div style={{ width: '52px', height: '52px', border: `4px solid ${accentLight}`, borderTop: `4px solid ${accent}`, borderRadius: '50%', margin: '0 auto 20px', animation: 'spin 1s linear infinite' }} />
+                      <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0a0a0a', marginBottom: '8px' }}>Generating quiz…</h3>
+                      <p style={{ color: gray400, fontSize: '14px' }}>Claude is writing 10 questions from your lecture</p>
+                    </div>
+                  )}
+
+                  {!quizLoading && !quiz && (
+                    <div style={{ textAlign: 'center', paddingTop: '60px' }}>
+                      <div style={{ fontSize: '48px', marginBottom: '16px' }}>🧠</div>
+                      <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px', color: '#0a0a0a' }}>Test your knowledge</h3>
+                      <p style={{ color: gray600, fontSize: '14px', marginBottom: '24px' }}>Generate a 10-question multiple-choice quiz from this lecture</p>
+                      <button
+                        onClick={generateQuiz}
+                        style={{ padding: '12px 32px', background: accent, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        Generate Quiz
+                      </button>
+                    </div>
+                  )}
+
+                  {!quizLoading && quiz && !quizSubmitted && (
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                        <p style={{ fontSize: '13px', color: gray400 }}>{Object.keys(quizAnswers).length}/{quiz.length} answered</p>
+                        <button onClick={() => { setQuiz(null); setQuizAnswers({}); setQuizSubmitted(false) }} style={{ fontSize: '12px', color: gray600, background: '#fff', border: `1px solid ${gray200}`, borderRadius: '6px', padding: '5px 12px', cursor: 'pointer' }}>
+                          Regenerate
+                        </button>
+                      </div>
+
+                      {quiz.map((q, qi) => (
+                        <div key={qi} style={{ border: `1px solid ${gray200}`, borderRadius: '12px', padding: '20px', marginBottom: '14px', background: '#fff' }}>
+                          <p style={{ fontSize: '14px', fontWeight: 600, color: '#0a0a0a', marginBottom: '14px', lineHeight: '1.5' }}>
+                            <span style={{ color: accent, marginRight: '6px' }}>Q{qi + 1}.</span>{q.question}
+                          </p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {q.options.map((opt, oi) => {
+                              const letter = ['A', 'B', 'C', 'D'][oi]
+                              const selected = quizAnswers[qi] === letter
+                              return (
+                                <button
+                                  key={oi}
+                                  onClick={() => setQuizAnswers(prev => ({ ...prev, [qi]: letter }))}
+                                  style={{
+                                    textAlign: 'left', padding: '10px 14px', borderRadius: '8px', border: `1.5px solid ${selected ? accent : gray200}`,
+                                    background: selected ? accentLight : '#fff', color: selected ? accent : gray800,
+                                    fontSize: '13px', fontWeight: selected ? 600 : 400, cursor: 'pointer', transition: 'all .15s', lineHeight: '1.5'
+                                  }}
+                                >
+                                  {opt}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ))}
+
+                      <button
+                        onClick={() => setQuizSubmitted(true)}
+                        disabled={Object.keys(quizAnswers).length < quiz.length}
+                        style={{ width: '100%', padding: '14px', background: Object.keys(quizAnswers).length === quiz.length ? accent : gray200, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: 700, cursor: Object.keys(quizAnswers).length === quiz.length ? 'pointer' : 'not-allowed', marginTop: '8px', transition: 'background .2s' }}
+                      >
+                        Submit Quiz
+                      </button>
+                    </div>
+                  )}
+
+                  {!quizLoading && quiz && quizSubmitted && (
+                    <div>
+                      {/* Score banner */}
+                      <div style={{ background: quizScore >= 7 ? '#ecfdf5' : quizScore >= 5 ? '#fffbeb' : '#fef2f2', border: `1px solid ${quizScore >= 7 ? '#6ee7b7' : quizScore >= 5 ? '#fde68a' : '#fecaca'}`, borderRadius: '14px', padding: '24px', textAlign: 'center', marginBottom: '24px' }}>
+                        <div style={{ fontSize: '48px', fontWeight: 800, color: quizScore >= 7 ? green : quizScore >= 5 ? '#d97706' : '#dc2626', marginBottom: '6px' }}>
+                          {quizScore}/{quiz.length}
+                        </div>
+                        <p style={{ fontSize: '16px', fontWeight: 700, color: '#0a0a0a', marginBottom: '4px' }}>
+                          {quizScore === quiz.length ? '🎉 Perfect score!' : quizScore >= 7 ? '✅ Great work!' : quizScore >= 5 ? '📚 Keep studying!' : '💪 Review the lecture and try again!'}
+                        </p>
+                        <p style={{ fontSize: '13px', color: gray600 }}>{Math.round((quizScore / quiz.length) * 100)}% correct</p>
+                      </div>
+
+                      {/* Review */}
+                      {quiz.map((q, qi) => {
+                        const userAns = quizAnswers[qi]
+                        const correct = userAns === q.answer
+                        return (
+                          <div key={qi} style={{ border: `1.5px solid ${correct ? '#6ee7b7' : '#fecaca'}`, borderRadius: '12px', padding: '18px 20px', marginBottom: '12px', background: correct ? '#f0fdf4' : '#fef2f2' }}>
+                            <p style={{ fontSize: '14px', fontWeight: 600, color: '#0a0a0a', marginBottom: '10px', lineHeight: '1.5' }}>
+                              <span style={{ marginRight: '6px' }}>{correct ? '✅' : '❌'}</span>
+                              <span style={{ color: accent, marginRight: '6px' }}>Q{qi + 1}.</span>{q.question}
+                            </p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              {q.options.map((opt, oi) => {
+                                const letter = ['A', 'B', 'C', 'D'][oi]
+                                const isCorrect = letter === q.answer
+                                const isUser = letter === userAns
+                                return (
+                                  <div key={oi} style={{
+                                    padding: '8px 12px', borderRadius: '7px', fontSize: '13px', lineHeight: '1.5',
+                                    background: isCorrect ? '#dcfce7' : isUser && !isCorrect ? '#fee2e2' : '#fff',
+                                    border: `1px solid ${isCorrect ? '#86efac' : isUser && !isCorrect ? '#fca5a5' : gray200}`,
+                                    fontWeight: isCorrect || isUser ? 600 : 400,
+                                    color: isCorrect ? '#166534' : isUser && !isCorrect ? '#991b1b' : gray600
+                                  }}>
+                                    {opt} {isCorrect && '✓'}{isUser && !isCorrect && '✗'}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )
+                      })}
+
+                      <button
+                        onClick={() => { setQuizAnswers({}); setQuizSubmitted(false) }}
+                        style={{ width: '100%', padding: '13px', background: accent, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', marginTop: '8px' }}
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
             </div>
           )}
         </main>

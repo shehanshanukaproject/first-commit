@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  serverExternalPackages: ['pdf-parse', 'fluent-ffmpeg', 'ffmpeg-static', '@ffprobe-installer/ffprobe'],
   images: {
-    domains: ['img.clerk.com'],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'img.clerk.com' },
+    ],
   },
   poweredByHeader: false,
 }

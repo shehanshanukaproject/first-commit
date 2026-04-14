@@ -31,7 +31,7 @@ export async function POST(request) {
       messages: [
         {
           role: 'user',
-          content: `You are an expert CS tutor. Analyze this lecture transcript and return a JSON object with exactly this structure:
+          content: `You are an expert academic tutor working with university students from all disciplines — Medicine, Law, Business, Engineering, Psychology, History, Biology, Economics, Computer Science, Arts, and more. Analyze this lecture transcript and return a JSON object with exactly this structure:
 
 {
   "title": "lecture title",
@@ -40,8 +40,8 @@ export async function POST(request) {
     {
       "name": "concept name",
       "explanation": "clear plain-English explanation",
-      "example": "code example or analogy",
-      "examTip": "common exam question about this"
+      "example": "a concrete example, analogy, or illustration relevant to this subject",
+      "examTip": "common exam question or assessment tip about this concept"
     }
   ],
   "keyPoints": ["point 1", "point 2", "point 3"],

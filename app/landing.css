@@ -253,7 +253,7 @@ body {
 .l-faq-question:hover { background: var(--gray-50); }
 .l-faq-chevron { font-size: 12px; color: var(--gray-400); transition: transform .2s; }
 .l-faq-answer { font-size: 14px; color: var(--gray-600); line-height: 1.7; overflow: hidden; max-height: 0; transition: max-height .3s ease, padding .3s; padding: 0 24px; }
-.l-faq-item.open .l-faq-answer { max-height: 200px; padding: 0 24px 20px; }
+.l-faq-item.open .l-faq-answer { max-height: 400px; padding: 0 24px 20px; }
 .l-faq-item.open .l-faq-chevron { transform: rotate(180deg); }
 
 /* CTA */
