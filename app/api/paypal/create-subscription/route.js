@@ -42,6 +42,10 @@ export async function POST() {
     return Response.json({ subscriptionId: subscription.id, approvalUrl })
   } catch (err) {
     console.error('PayPal create-subscription error:', err)
-    return Response.json({ error: err.message }, { status: 500 })
+    const isConfig = err.message?.includes('not configured')
+    return Response.json(
+      { error: isConfig ? 'Payment service is temporarily unavailable. Please try again later.' : 'Failed to start checkout. Please try again.' },
+      { status: 500 }
+    )
   }
 }
