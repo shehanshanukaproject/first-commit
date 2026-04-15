@@ -79,18 +79,32 @@ async function transcribeFile(filePath, filename) {
 export async function POST(request) {
   const tmpDir = path.join(os.tmpdir(), 'lectureai-' + crypto.randomUUID())
   try {
-    const { userId } = await auth()
+    let userId
+    try {
+      const authResult = await auth()
+      userId = authResult.userId
+    } catch (authErr) {
+      console.error('Auth error:', authErr)
+      return Response.json({ error: 'Authentication failed: ' + authErr.message }, { status: 401 })
+    }
     if (!userId) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Rate limit check
-    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-    const { count } = await getSupabaseServer()
-      .from('lectures')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('created_at', startOfMonth)
+    let count = 0
+    try {
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+      const result = await getSupabaseServer()
+        .from('lectures')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', startOfMonth)
+      count = result.count ?? 0
+    } catch (dbErr) {
+      console.error('Rate limit check error:', dbErr)
+      // Allow through if rate limit check fails — don't block the user
+    }
     if (count >= 3) {
       return Response.json({ error: 'Free plan limit reached. Upgrade to Pro for unlimited lectures.' }, { status: 429 })
     }
@@ -117,7 +131,12 @@ export async function POST(request) {
 
     // Compress to small mono MP3 (handles video + audio, strips video track)
     const compressedPath = path.join(tmpDir, 'compressed.mp3')
-    await compressAudio(inputPath, compressedPath)
+    try {
+      await compressAudio(inputPath, compressedPath)
+    } catch (ffmpegErr) {
+      console.error('FFmpeg compression error:', ffmpegErr)
+      return Response.json({ error: 'Failed to process audio: ' + ffmpegErr.message }, { status: 500 })
+    }
 
     const stat = await fs.stat(compressedPath)
     let transcript = ''
