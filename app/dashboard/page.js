@@ -106,6 +106,15 @@ export default function Dashboard() {
   const [upgradeError,     setUpgradeError]     = useState('')
   const [paypalReady,      setPaypalReady]      = useState(false)
 
+  // Support modal
+  const [showSupportModal,   setShowSupportModal]   = useState(false)
+  const [supportSubject,     setSupportSubject]     = useState('Bug Report')
+  const [supportMessage,     setSupportMessage]     = useState('')
+  const [supportEmail,       setSupportEmail]       = useState('')
+  const [supportLoading,     setSupportLoading]     = useState(false)
+  const [supportError,       setSupportError]       = useState('')
+  const [supportSuccess,     setSupportSuccess]     = useState(false)
+
   // Mobile
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile,    setIsMobile]    = useState(false)
@@ -391,6 +400,37 @@ export default function Dashboard() {
     }
   }
 
+  // ── Support submission ───────────────────────────────────────────────────
+
+  const sendSupport = async () => {
+    if (!supportMessage.trim() || supportLoading) return
+    setSupportError('')
+    setSupportLoading(true)
+    try {
+      const res  = await fetch('/api/support', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ subject: supportSubject, message: supportMessage, userEmail: supportEmail }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to send.')
+      setSupportSuccess(true)
+      setSupportMessage('')
+      setSupportEmail('')
+    } catch (err) {
+      setSupportError(err.message)
+    } finally {
+      setSupportLoading(false)
+    }
+  }
+
+  const openSupport = () => {
+    setSupportSuccess(false)
+    setSupportError('')
+    setSupportMessage('')
+    setShowSupportModal(true)
+  }
+
   const isPro      = userPlan === 'pro'
   const isLoading  = ['uploading','extracting','transcribing','analyzing','saving'].includes(status)
   const usagePct   = Math.min((lecturesThisMonth / 3) * 100, 100)
@@ -454,6 +494,10 @@ export default function Dashboard() {
               Upgrade to Pro
             </button>
           )}
+          <button onClick={openSupport}
+            style={{ fontSize: 13, fontWeight: 600, color: C.gray600, background: 'none', border: `1px solid ${C.gray200}`, padding: '6px 12px', borderRadius: 6, cursor: 'pointer' }}>
+            💬 Support
+          </button>
           <Link href="/account" style={{ fontSize: 13, fontWeight: 600, color: C.gray600, textDecoration: 'none', padding: '6px 12px', borderRadius: 6, border: `1px solid ${C.gray200}` }}>
             Account
           </Link>
@@ -956,6 +1000,100 @@ export default function Dashboard() {
           )}
         </main>
       </div>
+
+      {/* ── SUPPORT MODAL ──────────────────────────────────────────────── */}
+      {showSupportModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={e => { if (e.target === e.currentTarget) { setShowSupportModal(false); setSupportSuccess(false) } }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '30px 26px', maxWidth: 460, width: '100%', animation: 'modalIn .2s ease', boxShadow: '0 20px 60px rgba(0,0,0,.2)', position: 'relative' }}>
+
+            <button onClick={() => { setShowSupportModal(false); setSupportSuccess(false) }}
+              style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: C.gray600, lineHeight: 1 }}>×</button>
+
+            {supportSuccess ? (
+              /* ── Success state ── */
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <div style={{ fontSize: 48, marginBottom: 14 }}>✅</div>
+                <h3 style={{ fontSize: 20, fontWeight: 800, color: '#0a0a0a', marginBottom: 8 }}>Message Sent!</h3>
+                <p style={{ fontSize: 14, color: C.gray600, marginBottom: 20, lineHeight: 1.6 }}>
+                  We&apos;ve received your message and will reply to your email within 24 hours.
+                </p>
+                <button onClick={() => { setShowSupportModal(false); setSupportSuccess(false) }}
+                  style={{ padding: '10px 24px', background: C.accent, color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                  Done
+                </button>
+              </div>
+            ) : (
+              /* ── Form state ── */
+              <>
+                <div style={{ textAlign: 'center', marginBottom: 22 }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>💬</div>
+                  <h3 style={{ fontSize: 20, fontWeight: 800, color: '#0a0a0a', marginBottom: 4 }}>Contact Support</h3>
+                  <p style={{ fontSize: 13, color: C.gray600 }}>We&apos;ll get back to you within 24 hours</p>
+                </div>
+
+                {/* Category */}
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: C.gray600, display: 'block', marginBottom: 6 }}>Category</label>
+                  <select value={supportSubject} onChange={e => setSupportSubject(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', border: `1px solid ${C.gray200}`, borderRadius: 8, fontSize: 14, fontFamily: FF, background: '#fff', color: C.gray800, outline: 'none', cursor: 'pointer' }}>
+                    <option>Bug Report</option>
+                    <option>Upload Issue</option>
+                    <option>Billing / Subscription</option>
+                    <option>Feature Request</option>
+                    <option>Account Issue</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+
+                {/* Reply-to email */}
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: C.gray600, display: 'block', marginBottom: 6 }}>Your Email <span style={{ color: C.gray400, fontWeight: 400 }}>(so we can reply)</span></label>
+                  <input
+                    type="email"
+                    value={supportEmail}
+                    onChange={e => setSupportEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    style={{ width: '100%', padding: '10px 12px', border: `1px solid ${C.gray200}`, borderRadius: 8, fontSize: 14, fontFamily: FF, outline: 'none', boxSizing: 'border-box' }}
+                    onFocus={e => e.currentTarget.style.borderColor = C.accent}
+                    onBlur={e => e.currentTarget.style.borderColor = C.gray200}
+                  />
+                </div>
+
+                {/* Message */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: C.gray600, display: 'block', marginBottom: 6 }}>Message</label>
+                  <textarea
+                    value={supportMessage}
+                    onChange={e => setSupportMessage(e.target.value)}
+                    placeholder="Describe your issue in detail — what happened, what you expected, any error messages…"
+                    rows={5}
+                    style={{ width: '100%', padding: '10px 12px', border: `1px solid ${C.gray200}`, borderRadius: 8, fontSize: 14, fontFamily: FF, resize: 'vertical', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6 }}
+                    onFocus={e => e.currentTarget.style.borderColor = C.accent}
+                    onBlur={e => e.currentTarget.style.borderColor = C.gray200}
+                  />
+                  <div style={{ fontSize: 11, color: C.gray400, marginTop: 4, textAlign: 'right' }}>{supportMessage.length} chars</div>
+                </div>
+
+                {supportError && (
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', padding: '9px 12px', borderRadius: 8, fontSize: 13, marginBottom: 12 }}>
+                    ⚠️ {supportError}
+                  </div>
+                )}
+
+                <button onClick={sendSupport} disabled={!supportMessage.trim() || supportLoading}
+                  style={{ width: '100%', padding: 13, background: supportMessage.trim() && !supportLoading ? C.accent : C.gray200, color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: supportMessage.trim() && !supportLoading ? 'pointer' : 'not-allowed', transition: 'all .2s' }}>
+                  {supportLoading ? 'Sending…' : 'Send Message'}
+                </button>
+
+                <p style={{ textAlign: 'center', fontSize: 11, color: C.gray400, marginTop: 10 }}>
+                  Or email us directly at <a href="mailto:support@lectureai.cc" style={{ color: C.accent }}>support@lectureai.cc</a>
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── UPGRADE MODAL ──────────────────────────────────────────────── */}
       {showUpgradeModal && (
