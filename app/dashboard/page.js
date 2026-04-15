@@ -411,6 +411,19 @@ export default function Dashboard() {
               >
                 Process lecture
               </button>
+
+              {/* PDF Analyzer card */}
+              <div style={{ marginTop: '32px', width: '100%', maxWidth: '400px' }}>
+                <p style={{ fontSize: '12px', color: gray400, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Have a PDF instead?</p>
+                <Link href="/pdf" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px', borderRadius: '12px', background: '#fdf4ff', border: '1px solid #e9d5ff', textDecoration: 'none', transition: 'all .2s' }}>
+                  <span style={{ fontSize: '28px' }}>📄</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <p style={{ fontSize: '14px', fontWeight: 700, color: '#7c3aed', margin: 0 }}>PDF Analyzer</p>
+                    <p style={{ fontSize: '12px', color: '#9333ea', margin: '2px 0 0', opacity: 0.8 }}>Upload a PDF and chat with AI about it</p>
+                  </div>
+                  <span style={{ marginLeft: 'auto', color: '#7c3aed', fontSize: '16px' }}>→</span>
+                </Link>
+              </div>
             </div>
           )}
 
