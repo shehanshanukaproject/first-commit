@@ -82,9 +82,10 @@ export default function Dashboard() {
   const [error,         setError]         = useState('')
 
   // Notes / lecture
-  const [notes,           setNotes]           = useState(null)
-  const [activeLectureId, setActiveLectureId] = useState(null)
-  const [activeTab,       setActiveTab]       = useState('notes')
+  const [notes,            setNotes]            = useState(null)
+  const [activeLectureId,  setActiveLectureId]  = useState(null)
+  const [activeTab,        setActiveTab]        = useState('notes')
+  const [selectedChapter,  setSelectedChapter]  = useState(null)   // null = overview
 
   // Chat
   const [messages,    setMessages]    = useState([])
@@ -277,6 +278,7 @@ export default function Dashboard() {
       setActiveLectureId(data.lectureId)
       setMessages([])
       setActiveTab('notes')
+      setSelectedChapter(null)
       setStatus('done')
       fetchPastLectures()
       fetchUserPlan()
@@ -300,6 +302,7 @@ export default function Dashboard() {
       setActiveLectureId(id)
       setMessages([])
       setActiveTab('notes')
+      setSelectedChapter(null)
       setStatus('done')
       setFile(null)
       setFileType(null)
@@ -313,6 +316,7 @@ export default function Dashboard() {
     setNotes(null); setFile(null); setFileType(null)
     setStatus('idle'); setError(''); setMessages([])
     setActiveTab('notes'); setActiveLectureId(null); setUploadWarning('')
+    setSelectedChapter(null)
     if (isMobile) setSidebarOpen(false)
   }
 
@@ -697,60 +701,126 @@ export default function Dashboard() {
               </div>
 
               {/* ── NOTES TAB ── */}
-              {activeTab === 'notes' && (
-                <div style={{ animation: 'fadeIn .3s ease' }}>
+              {activeTab === 'notes' && (() => {
+                const hasChapters = Array.isArray(notes.chapters) && notes.chapters.length > 0
+                const ch = hasChapters && selectedChapter !== null ? notes.chapters[selectedChapter] : null
+                // Which set of notes to render
+                const displaySummary  = ch ? ch.summary  : notes.summary
+                const displayPoints   = ch ? (ch.keyPoints  || []) : (notes.keyPoints  || [])
+                const displayConcepts = ch ? (ch.concepts   || []) : (notes.concepts   || [])
+                const displayGlossary = ch ? (ch.glossary   || []) : (notes.glossary   || [])
 
-                  {/* Summary */}
-                  <div style={{ background: C.accentLight, borderLeft: `4px solid ${C.accent}`, borderRadius: '0 10px 10px 0', padding: '14px 18px', marginBottom: 26 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: C.accent, marginBottom: 6 }}>Summary</div>
-                    <p style={{ fontSize: 14, color: C.gray800, lineHeight: 1.7, margin: 0 }}>{notes.summary}</p>
-                  </div>
+                return (
+                  <div style={{ animation: 'fadeIn .3s ease' }}>
 
-                  {/* Key Points */}
-                  <SectionLabel color={C.accent} label="KEY POINTS" />
-                  <ul style={{ listStyle: 'none', padding: 0, marginBottom: 26 }}>
-                    {(notes.keyPoints || []).map((pt, i) => (
-                      <li key={i} style={{ display: 'flex', gap: 9, fontSize: 14, color: C.gray800, marginBottom: 8, lineHeight: 1.6 }}>
-                        <span style={{ color: C.green, fontWeight: 700, flexShrink: 0 }}>✓</span>{pt}
-                      </li>
-                    ))}
-                  </ul>
-
-                  {/* Concepts */}
-                  <SectionLabel color="#7c3aed" label="CONCEPTS" />
-                  {(notes.concepts || []).map((c, i) => (
-                    <div key={i} style={{ border: `1px solid ${C.gray200}`, borderRadius: 12, padding: 18, marginBottom: 12, background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,.04)' }}>
-                      <h4 style={{ fontSize: 14, fontWeight: 700, color: '#0a0a0a', marginBottom: 7 }}>{c.name}</h4>
-                      <p style={{ fontSize: 13, color: C.gray600, lineHeight: 1.7, marginBottom: 10 }}>{c.explanation}</p>
-                      {c.example && (
-                        <div style={{ background: '#0a0a0a', borderRadius: 8, padding: '11px 14px', marginBottom: 10, overflowX: 'auto' }}>
-                          <pre style={{ fontSize: 12, fontFamily: '"Courier New",monospace', color: '#a5f3fc', lineHeight: 1.6, whiteSpace: 'pre-wrap', margin: 0 }}>{c.example}</pre>
+                    {/* ── Chapter navigation pills ── */}
+                    {hasChapters && (
+                      <div style={{ marginBottom: 22 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: C.gray400, marginBottom: 10 }}>
+                          Chapters
                         </div>
-                      )}
-                      {c.examTip && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a', fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 100 }}>
-                          ⚠️ Exam tip: {c.examTip}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                          {/* Overview pill */}
+                          <button
+                            onClick={() => setSelectedChapter(null)}
+                            style={{
+                              padding: '6px 14px', borderRadius: 100, border: `1px solid ${selectedChapter === null ? C.accent : C.gray200}`,
+                              background: selectedChapter === null ? C.accent : '#fff',
+                              color: selectedChapter === null ? '#fff' : C.gray600,
+                              fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all .15s', fontFamily: FF,
+                            }}>
+                            📋 Overview
+                          </button>
+                          {/* One pill per chapter */}
+                          {notes.chapters.map((chapter, i) => (
+                            <button
+                              key={i}
+                              onClick={() => setSelectedChapter(i)}
+                              style={{
+                                padding: '6px 14px', borderRadius: 100, border: `1px solid ${selectedChapter === i ? C.accent : C.gray200}`,
+                                background: selectedChapter === i ? C.accentLight : '#fff',
+                                color: selectedChapter === i ? C.accent : C.gray600,
+                                fontSize: 12, fontWeight: selectedChapter === i ? 700 : 500,
+                                cursor: 'pointer', transition: 'all .15s', fontFamily: FF,
+                                maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                              }}>
+                              {chapter.number}. {chapter.title}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
-                  {/* Glossary */}
-                  {(notes.glossary || []).length > 0 && (
-                    <>
-                      <SectionLabel color="#0891b2" label="GLOSSARY" />
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 26 }}>
-                        {notes.glossary.map((g, i) => (
-                          <div key={i} style={{ border: `1px solid ${C.gray200}`, borderRadius: 8, padding: '9px 14px', background: '#fff', display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                            <span style={{ fontWeight: 700, color: C.accent, fontSize: 13, flexShrink: 0 }}>{g.term}</span>
-                            <span style={{ fontSize: 13, color: C.gray600, lineHeight: 1.6 }}>— {g.definition}</span>
+                    {/* ── Chapter header (when a chapter is selected) ── */}
+                    {ch && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+                        <span style={{ background: C.accent, color: '#fff', borderRadius: 8, padding: '4px 12px', fontSize: 12, fontWeight: 700 }}>
+                          Chapter {ch.number}
+                        </span>
+                        <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0a0a0a', margin: 0 }}>{ch.title}</h3>
+                      </div>
+                    )}
+
+                    {/* Summary */}
+                    <div style={{ background: C.accentLight, borderLeft: `4px solid ${C.accent}`, borderRadius: '0 10px 10px 0', padding: '14px 18px', marginBottom: 26 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: C.accent, marginBottom: 6 }}>Summary</div>
+                      <p style={{ fontSize: 14, color: C.gray800, lineHeight: 1.7, margin: 0 }}>{displaySummary}</p>
+                    </div>
+
+                    {/* Key Points */}
+                    {displayPoints.length > 0 && (
+                      <>
+                        <SectionLabel color={C.accent} label="KEY POINTS" />
+                        <ul style={{ listStyle: 'none', padding: 0, marginBottom: 26 }}>
+                          {displayPoints.map((pt, i) => (
+                            <li key={i} style={{ display: 'flex', gap: 9, fontSize: 14, color: C.gray800, marginBottom: 8, lineHeight: 1.6 }}>
+                              <span style={{ color: C.green, fontWeight: 700, flexShrink: 0 }}>✓</span>{pt}
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+
+                    {/* Concepts */}
+                    {displayConcepts.length > 0 && (
+                      <>
+                        <SectionLabel color="#7c3aed" label="CONCEPTS" />
+                        {displayConcepts.map((c, i) => (
+                          <div key={i} style={{ border: `1px solid ${C.gray200}`, borderRadius: 12, padding: 18, marginBottom: 12, background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,.04)' }}>
+                            <h4 style={{ fontSize: 14, fontWeight: 700, color: '#0a0a0a', marginBottom: 7 }}>{c.name}</h4>
+                            <p style={{ fontSize: 13, color: C.gray600, lineHeight: 1.7, marginBottom: 10 }}>{c.explanation}</p>
+                            {c.example && (
+                              <div style={{ background: '#0a0a0a', borderRadius: 8, padding: '11px 14px', marginBottom: 10, overflowX: 'auto' }}>
+                                <pre style={{ fontSize: 12, fontFamily: '"Courier New",monospace', color: '#a5f3fc', lineHeight: 1.6, whiteSpace: 'pre-wrap', margin: 0 }}>{c.example}</pre>
+                              </div>
+                            )}
+                            {c.examTip && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a', fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 100 }}>
+                                ⚠️ Exam tip: {c.examTip}
+                              </span>
+                            )}
                           </div>
                         ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
+                      </>
+                    )}
+
+                    {/* Glossary */}
+                    {displayGlossary.length > 0 && (
+                      <>
+                        <SectionLabel color="#0891b2" label="GLOSSARY" />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 26 }}>
+                          {displayGlossary.map((g, i) => (
+                            <div key={i} style={{ border: `1px solid ${C.gray200}`, borderRadius: 8, padding: '9px 14px', background: '#fff', display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                              <span style={{ fontWeight: 700, color: C.accent, fontSize: 13, flexShrink: 0 }}>{g.term}</span>
+                              <span style={{ fontSize: 13, color: C.gray600, lineHeight: 1.6 }}>— {g.definition}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )
+              })()}
 
               {/* ── CHAT TAB ── */}
               {activeTab === 'chat' && (

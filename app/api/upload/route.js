@@ -104,18 +104,34 @@ async function transcribeAudioVideo(buffer, fileName, tmpDir) {
 
 async function generateNotes(content) {
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6', max_tokens: 4000,
+    model: 'claude-sonnet-4-6', max_tokens: 6000,
     messages: [{
       role: 'user',
-      content: `You are an expert academic tutor. Analyze this lecture content and return ONLY a valid JSON object — no extra text, no markdown fences:
+      content: `You are an expert academic tutor. Analyze this lecture content, detect distinct chapters or sections, and return ONLY a valid JSON object — no extra text, no markdown fences:
 {
   "title": "string",
-  "summary": "3-4 sentence overview",
-  "concepts": [{ "name": "string", "explanation": "string", "example": "string", "examTip": "string" }],
+  "summary": "3-4 sentence overview of the entire lecture",
+  "chapters": [
+    {
+      "number": 1,
+      "title": "Chapter/section title",
+      "summary": "2-3 sentence summary of this chapter",
+      "keyPoints": ["string"],
+      "concepts": [{ "name": "string", "explanation": "string", "example": "string", "examTip": "string" }],
+      "glossary": [{ "term": "string", "definition": "string" }]
+    }
+  ],
   "keyPoints": ["string"],
+  "concepts": [{ "name": "string", "explanation": "string", "example": "string", "examTip": "string" }],
   "resources": [{ "type": "youtube", "title": "string", "search": "string" }],
   "glossary": [{ "term": "string", "definition": "string" }]
 }
+
+Rules:
+- Detect 2-6 natural chapters or sections. If the content has no explicit chapters, split it into logical topic-based sections.
+- Each chapter must have at least 1 keyPoint and 1 concept.
+- The top-level keyPoints, concepts, glossary are a combined overview across all chapters.
+- Keep chapters focused and distinct.
 
 Content:
 ${content.slice(0, 60000)}`,
