@@ -182,10 +182,26 @@ export default function Dashboard() {
 
   const pickFile = (f) => {
     if (!f) return
+    const type = detectFileType(f)
     setFile(f)
-    setFileType(detectFileType(f))
+    setFileType(type)
     setError('')
-    setUploadWarning('')
+
+    // Warn about Vercel serverless limits before the user even clicks upload
+    if (f.size > 4.4 * 1024 * 1024 && type === 'pdf') {
+      setUploadWarning(
+        `This PDF is ${formatBytes(f.size)}. Vercel limits uploads to 4.5 MB — it will be rejected. ` +
+        'Please compress the PDF (try ilovepdf.com) and re-upload.'
+      )
+    } else if (type === 'video' || type === 'audio') {
+      setUploadWarning(
+        'Video and audio processing requires Vercel Pro (300 s timeout). ' +
+        'On the Hobby plan the function will time out. ' +
+        'If uploads fail, extract the audio track as MP3 first — it processes faster.'
+      )
+    } else {
+      setUploadWarning('')
+    }
   }
 
   const handleDrop = (e) => {
@@ -220,7 +236,29 @@ export default function Dashboard() {
 
       clearInterval(stageTimer.current)
 
-      const data = await res.json()
+      // Vercel's infrastructure can return plain text or HTML before our code runs
+      // (e.g. 413 "Request Entity Too Large", 504 timeout HTML page).
+      // Always parse as text first so we never crash on res.json().
+      const raw = await res.text()
+      let data
+      try {
+        data = JSON.parse(raw)
+      } catch {
+        if (res.status === 413 || raw.includes('Request Entity Too Large')) {
+          throw new Error(
+            'File rejected by server — it exceeds the 4.5 MB upload limit. ' +
+            'Please compress the file and try again.'
+          )
+        }
+        if (res.status === 504 || res.status === 502 || raw.includes('FUNCTION_INVOCATION_TIMEOUT')) {
+          throw new Error(
+            'Processing timed out. This usually means your hosting plan has a short function timeout. ' +
+            'For video/audio, try extracting the audio as MP3 first (it processes much faster). ' +
+            'For large PDFs, try compressing the file.'
+          )
+        }
+        throw new Error('Unexpected server response. Please try again.')
+      }
 
       if (res.status === 403 && data.error === 'limit_reached') {
         setShowUpgradeModal(true)
