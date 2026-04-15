@@ -15,20 +15,29 @@ export async function POST(request) {
 
     const { transcript } = await request.json()
 
-    let count = 0
     try {
-      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-      const result = await getSupabaseServer()
-        .from('lectures')
-        .select('*', { count: 'exact', head: true })
+      const supabase = getSupabaseServer()
+      const { data: planData } = await supabase
+        .from('user_plans')
+        .select('plan')
         .eq('user_id', userId)
-        .gte('created_at', startOfMonth)
-      count = result.count ?? 0
+        .single()
+
+      const isPro = planData?.plan === 'pro'
+
+      if (!isPro) {
+        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+        const { count } = await supabase
+          .from('lectures')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .gte('created_at', startOfMonth)
+        if ((count ?? 0) >= 3) {
+          return Response.json({ error: 'Free plan limit reached. Upgrade to Pro for unlimited lectures.' }, { status: 429 })
+        }
+      }
     } catch (dbErr) {
       console.error('Rate limit check error:', dbErr)
-    }
-    if (count >= 3) {
-      return Response.json({ error: 'Free plan limit reached. Upgrade to Pro for unlimited lectures.' }, { status: 429 })
     }
 
     const message = await anthropic.messages.create({

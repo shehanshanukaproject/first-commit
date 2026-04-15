@@ -91,22 +91,31 @@ export async function POST(request) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Rate limit check
-    let count = 0
+    // Rate limit check — skip entirely for Pro users
     try {
-      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-      const result = await getSupabaseServer()
-        .from('lectures')
-        .select('*', { count: 'exact', head: true })
+      const supabase = getSupabaseServer()
+      const { data: planData } = await supabase
+        .from('user_plans')
+        .select('plan')
         .eq('user_id', userId)
-        .gte('created_at', startOfMonth)
-      count = result.count ?? 0
+        .single()
+
+      const isPro = planData?.plan === 'pro'
+
+      if (!isPro) {
+        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+        const { count } = await supabase
+          .from('lectures')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .gte('created_at', startOfMonth)
+        if ((count ?? 0) >= 3) {
+          return Response.json({ error: 'Free plan limit reached. Upgrade to Pro for unlimited lectures.' }, { status: 429 })
+        }
+      }
     } catch (dbErr) {
       console.error('Rate limit check error:', dbErr)
-      // Allow through if rate limit check fails — don't block the user
-    }
-    if (count >= 3) {
-      return Response.json({ error: 'Free plan limit reached. Upgrade to Pro for unlimited lectures.' }, { status: 429 })
+      // Allow through if DB check fails — don't block the user
     }
 
     const formData = await request.formData()

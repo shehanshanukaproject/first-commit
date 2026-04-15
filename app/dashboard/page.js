@@ -94,15 +94,15 @@ export default function Dashboard() {
     try {
       setStatus('transcribing')
       const formData = new FormData()
-      // Sanitize filename: iOS Safari throws "The string did not match the
-      // expected pattern." when FormData contains files with non-ASCII chars
-      // (e.g. em dash –, accents, % signs) in the name.
+      // iOS Safari throws "The string did not match the expected pattern."
+      // when FormData contains a file with non-ASCII chars (em dash –, %, etc.)
+      // in the name. Use the 3-arg append() to override the filename without
+      // copying the file content into a new File object (safe for large videos).
       const dotIdx = file.name.lastIndexOf('.')
       const ext = dotIdx !== -1 ? file.name.slice(dotIdx) : ''
       const base = dotIdx !== -1 ? file.name.slice(0, dotIdx) : file.name
-      const safeName = base.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').replace(/_+/g, '_').trim() + ext
-      const safeFile = new File([file], safeName || 'upload' + ext, { type: file.type })
-      formData.append('file', safeFile)
+      const safeName = (base.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_').replace(/_+/g, '_').trim() || 'upload') + ext
+      formData.append('file', file, safeName)
       const transcribeRes = await fetch('/api/transcribe', { method: 'POST', body: formData })
       const transcribeData = await transcribeRes.json()
       if (transcribeData.error) throw new Error(transcribeData.error)
