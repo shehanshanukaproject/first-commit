@@ -103,38 +103,74 @@ async function transcribeAudioVideo(buffer, fileName, tmpDir) {
 // ── Claude: generate structured notes ─────────────────────────────────────
 
 async function generateNotes(content) {
+  // Cap input at 40 000 chars — leaves ample token budget for the response
+  const trimmed = content.slice(0, 40000)
+
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6', max_tokens: 6000,
+    model: 'claude-sonnet-4-6', max_tokens: 8000,
     messages: [{
       role: 'user',
-      content: `You are an expert academic tutor. Analyze this lecture content, detect distinct chapters or sections, and return ONLY a valid JSON object — no extra text, no markdown fences:
+      content: `You are an expert academic tutor. Analyze this lecture content, detect distinct chapters or sections, and return ONLY a valid JSON object — no extra text, no markdown fences. Be CONCISE — keep every field brief so the full JSON fits in one response.
+
 {
   "title": "string",
-  "summary": "3-4 sentence overview of the entire lecture",
+  "summary": "2-3 sentence overview of the entire lecture",
   "chapters": [
     {
       "number": 1,
       "title": "Chapter/section title",
-      "summary": "2-3 sentence summary of this chapter",
-      "keyPoints": ["string"],
-      "concepts": [{ "name": "string", "explanation": "string", "example": "string", "examTip": "string" }],
-      "glossary": [{ "term": "string", "definition": "string" }]
+      "summary": "1-2 sentence summary",
+      "keyPoints": ["up to 3 short points"],
+      "concepts": [{ "name": "string", "explanation": "1 sentence", "example": "brief", "examTip": "short tip" }],
+      "glossary": [{ "term": "string", "definition": "brief definition" }]
     }
   ],
-  "keyPoints": ["string"],
+  "keyPoints": ["up to 5 short points"],
+  "concepts": [{ "name": "string", "explanation": "1 sentence", "example": "brief", "examTip": "short tip" }],
+  "resources": [{ "type": "youtube", "title": "string", "search": "string" }],
+  "glossary": [{ "term": "string", "definition": "brief definition" }]
+}
+
+Strict limits to keep response short:
+- 2-5 chapters maximum
+- Per chapter: max 3 keyPoints, max 2 concepts, max 3 glossary terms
+- Top level: max 5 keyPoints, max 3 concepts, max 2 resources, max 5 glossary terms
+
+Content:
+${trimmed}`,
+    }],
+  })
+
+  const raw = message.content[0].text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
+
+  try {
+    return JSON.parse(raw)
+  } catch {
+    // JSON was still truncated — fall back to simple flat notes (no chapters)
+    return await generateSimpleNotes(content)
+  }
+}
+
+// Fallback: flat notes without chapters — much smaller response, very reliable
+async function generateSimpleNotes(content) {
+  const message = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6', max_tokens: 3000,
+    messages: [{
+      role: 'user',
+      content: `You are an expert academic tutor. Analyze this lecture content and return ONLY a valid JSON object — no extra text, no markdown fences:
+{
+  "title": "string",
+  "summary": "2-3 sentence overview",
+  "keyPoints": ["up to 5 points"],
   "concepts": [{ "name": "string", "explanation": "string", "example": "string", "examTip": "string" }],
   "resources": [{ "type": "youtube", "title": "string", "search": "string" }],
   "glossary": [{ "term": "string", "definition": "string" }]
 }
 
-Rules:
-- Detect 2-6 natural chapters or sections. If the content has no explicit chapters, split it into logical topic-based sections.
-- Each chapter must have at least 1 keyPoint and 1 concept.
-- The top-level keyPoints, concepts, glossary are a combined overview across all chapters.
-- Keep chapters focused and distinct.
+Limit: max 5 keyPoints, max 4 concepts, max 2 resources, max 5 glossary terms.
 
 Content:
-${content.slice(0, 60000)}`,
+${content.slice(0, 30000)}`,
     }],
   })
   const raw = message.content[0].text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim()
