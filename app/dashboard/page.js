@@ -82,7 +82,13 @@ export default function Dashboard() {
         if (data.error) throw new Error(data.error)
         return data.subscriptionId
       },
-      onApprove: () => { window.location.href = '/dashboard?upgraded=true' },
+      onApprove: (data) => {
+        // Route through success handler so the DB is updated before redirect
+        const subId = data.subscriptionID || data.orderID || ''
+        window.location.href = subId
+          ? `/api/paypal/success?subscription_id=${subId}`
+          : '/dashboard?upgraded=true'
+      },
       onError: (err) => {
         console.error('[PayPal] button error:', err)
         setUpgradeError('PayPal encountered an error. Please use the button below instead.')
