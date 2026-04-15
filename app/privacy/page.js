@@ -233,7 +233,7 @@ export default function PrivacyPage() {
         <p style={{ ...styles.p, fontWeight: 600, marginBottom: '6px' }}>Payment Information</p>
         <div style={styles.infoBox}>
           <strong>We never see your card details.</strong> All payment processing is handled entirely by
-          Lemon Squeezy, our payment provider. We receive only a confirmation of a successful transaction and
+          PayPal, our payment provider. We receive only a confirmation of a successful transaction and
           your subscription status. Your full card number, CVV, and billing address are never transmitted to
           or stored by LectureAI.
         </div>
@@ -246,7 +246,7 @@ export default function PrivacyPage() {
           <li style={styles.li}><strong>To manage your account</strong> — authenticating your identity, enforcing plan limits, and maintaining your subscription status.</li>
           <li style={styles.li}><strong>To improve accuracy and reliability</strong> — using anonymised usage patterns to identify areas for improvement, fix bugs, and optimise performance.</li>
           <li style={styles.li}><strong>To send important account communications</strong> — delivering transactional emails such as payment receipts, plan change notifications, and critical service updates. We do not send promotional marketing emails without your explicit consent.</li>
-          <li style={styles.li}><strong>To process payments</strong> — verifying subscription status with Lemon Squeezy and updating your plan accordingly.</li>
+          <li style={styles.li}><strong>To process payments</strong> — verifying subscription status with PayPal and updating your plan accordingly.</li>
           <li style={styles.li}><strong>To comply with legal obligations</strong> — retaining records as required by applicable law and responding to lawful requests from authorities.</li>
         </ul>
 
@@ -293,7 +293,7 @@ export default function PrivacyPage() {
             <p style={styles.thirdPartyRole}>Claude API — generates study notes and powers the AI chat</p>
           </div>
           <div style={styles.thirdPartyCard}>
-            <p style={styles.thirdPartyName}>Lemon Squeezy</p>
+            <p style={styles.thirdPartyName}>PayPal</p>
             <p style={styles.thirdPartyRole}>Payments — processes subscription billing securely</p>
           </div>
         </div>

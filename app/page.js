@@ -14,7 +14,7 @@ const faqs = [
   },
   {
     q: 'What audio and video file types are supported?',
-    a: 'LectureAI supports MP3, MP4, WAV, and M4A files up to 25MB. This covers virtually all lecture recordings — whether recorded on a phone, laptop, or downloaded from your university portal.'
+    a: 'LectureAI supports MP3, MP4, WAV, and M4A files up to 200MB. This covers virtually all lecture recordings — whether recorded on a phone, laptop, or downloaded from your university portal.'
   },
   {
     q: 'How does the PDF analysis feature work?',
@@ -127,7 +127,7 @@ export default function Home() {
             <div className="l-step-card">
               <div className="l-step-number">1</div>
               <h3>Upload your lecture</h3>
-              <p>Drag and drop any MP3, MP4, WAV, or M4A file — up to 25MB. Recorded live, downloaded from your portal, or saved from Zoom — all work perfectly.</p>
+              <p>Drag and drop any MP3, MP4, WAV, or M4A file — up to 200MB. Recorded live, downloaded from your portal, or saved from Zoom — all work perfectly.</p>
             </div>
             <div className="l-step-card">
               <div className="l-step-number">2</div>

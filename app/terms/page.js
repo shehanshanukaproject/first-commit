@@ -169,8 +169,7 @@ export default function TermsPage() {
         </p>
         <p style={styles.p}>
           Transcription is powered by OpenAI Whisper, and study note generation is performed using Anthropic Claude.
-          Supported file formats include MP3, MP4, WAV, and M4A, with a maximum file size of 25 MB per upload
-          (larger files may be compressed automatically where supported). Additional features include a PDF Analyzer
+          Supported file formats include MP3, MP4, WAV, and M4A, with a maximum file size of 200 MB per upload. Additional features include a PDF Analyzer
           for chatting with document content, a Practice Quiz generator, and an AI-powered chat interface for
           each set of notes.
         </p>
