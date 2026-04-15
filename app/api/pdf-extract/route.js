@@ -25,10 +25,9 @@ export async function POST(request) {
 
     const buffer = Buffer.from(await file.arrayBuffer())
 
-    const { PDFParse } = await import('pdf-parse')
-    const parser = new PDFParse({ data: buffer })
-    const data = await parser.getText()
-    await parser.destroy()
+    const pdfParseMod = await import('pdf-parse')
+    const pdfParse = pdfParseMod.default ?? pdfParseMod
+    const data = await pdfParse(buffer)
 
     const rawText = data.text?.trim() ?? ''
     if (!rawText) {
@@ -42,7 +41,7 @@ export async function POST(request) {
     const truncated = rawText.length > MAX_CHARS
     const text = truncated ? rawText.slice(0, MAX_CHARS) : rawText
 
-    return Response.json({ text, pages: data.total, truncated })
+    return Response.json({ text, pages: data.numpages, truncated })
   } catch (error) {
     console.error('PDF extract error:', error)
     return Response.json(

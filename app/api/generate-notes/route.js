@@ -15,12 +15,18 @@ export async function POST(request) {
 
     const { transcript } = await request.json()
 
-    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-    const { count } = await getSupabaseServer()
-      .from('lectures')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('created_at', startOfMonth)
+    let count = 0
+    try {
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+      const result = await getSupabaseServer()
+        .from('lectures')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', startOfMonth)
+      count = result.count ?? 0
+    } catch (dbErr) {
+      console.error('Rate limit check error:', dbErr)
+    }
     if (count >= 3) {
       return Response.json({ error: 'Free plan limit reached. Upgrade to Pro for unlimited lectures.' }, { status: 429 })
     }
