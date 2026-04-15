@@ -103,15 +103,34 @@ async function handleSubscriptionCancelled(event) {
 async function handlePaymentCompleted(event) {
   const sale   = event.resource
   const amount = sale.amount?.total
-  const subId  = sale.billing_agreement_id
+  const subId  = sale.billing_agreement_id  // subscription ID for recurring billing
 
   console.log(`[Webhook] PAYMENT.SALE.COMPLETED — sub: ${subId} amount: $${amount}`)
-  // You can log this to a payments table here if needed
-}
 
-async function handleSubscriptionExpired(event) {
-  // Same as cancelled — treat expired subscriptions as downgrade
-  return handleSubscriptionCancelled(event)
+  // For subscription renewals, billing_agreement_id is the subscription ID.
+  // Look up the user by subscription ID and confirm they stay on Pro.
+  if (!subId) return
+
+  try {
+    const supabase = getSupabaseServer()
+    const { data } = await supabase
+      .from('user_plans')
+      .select('user_id')
+      .eq('lemon_order_id', subId)
+      .single()
+
+    if (data?.user_id) {
+      await supabase.from('user_plans').upsert(
+        { user_id: data.user_id, plan: 'pro', lemon_order_id: subId, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+      console.log(`[Webhook] ✅ Renewal confirmed — user ${data.user_id} remains Pro`)
+    } else {
+      console.log(`[Webhook] PAYMENT.SALE.COMPLETED — sub ${subId} not found in DB (may be a one-time payment)`)
+    }
+  } catch (err) {
+    console.error('[Webhook] handlePaymentCompleted DB error:', err.message)
+  }
 }
 
 // ── Main handler ───────────────────────────────────────────────────────────
@@ -144,20 +163,21 @@ export async function POST(request) {
 
   try {
     switch (eventType) {
+      // User subscribes OR re-activates a suspended subscription
       case 'BILLING.SUBSCRIPTION.ACTIVATED':
-      case 'BILLING.SUBSCRIPTION.RENEWED':
+      case 'BILLING.SUBSCRIPTION.RE-ACTIVATED':
         await handleSubscriptionActivated(event)
         break
 
+      // User cancels, payment fails enough times, or subscription is paused
       case 'BILLING.SUBSCRIPTION.CANCELLED':
       case 'BILLING.SUBSCRIPTION.SUSPENDED':
+      case 'BILLING.SUBSCRIPTION.EXPIRED':
         await handleSubscriptionCancelled(event)
         break
 
-      case 'BILLING.SUBSCRIPTION.EXPIRED':
-        await handleSubscriptionExpired(event)
-        break
-
+      // Monthly renewal payment — keep user on Pro
+      // (PayPal does not send BILLING.SUBSCRIPTION.RENEWED — it sends this instead)
       case 'PAYMENT.SALE.COMPLETED':
         await handlePaymentCompleted(event)
         break
