@@ -8,10 +8,10 @@ export async function GET() {
 
     const supabase = getSupabaseServer()
 
-    // Get plan
+    // Get plan + subscription ID
     const { data: planData } = await supabase
       .from('user_plans')
-      .select('plan')
+      .select('plan, lemon_order_id, updated_at')
       .eq('user_id', userId)
       .single()
 
@@ -25,10 +25,12 @@ export async function GET() {
 
     return Response.json({
       plan: planData?.plan || 'free',
+      subscriptionId: planData?.lemon_order_id || null,
+      memberSince: planData?.updated_at || null,
       lecturesThisMonth: count || 0,
       lectureLimit: 3,
     })
   } catch {
-    return Response.json({ plan: 'free', lecturesThisMonth: 0, lectureLimit: 3 })
+    return Response.json({ plan: 'free', subscriptionId: null, memberSince: null, lecturesThisMonth: 0, lectureLimit: 3 })
   }
 }

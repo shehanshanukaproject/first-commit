@@ -294,7 +294,13 @@ export default function Dashboard() {
             Lecture<span style={{ color: accent }}>AI</span>
           </Link>
         </div>
-        <UserButton afterSignOutUrl="/" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <Link href="/account" style={{ fontSize: '13px', fontWeight: 600, color: gray600, textDecoration: 'none', padding: '6px 12px', borderRadius: '6px', border: `1px solid ${gray200}`, background: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {userPlan === 'pro' && <span style={{ fontSize: '11px' }}>⭐</span>}
+            Account
+          </Link>
+          <UserButton afterSignOutUrl="/" />
+        </div>
       </nav>
 
       {/* FREE PLAN BANNER */}
