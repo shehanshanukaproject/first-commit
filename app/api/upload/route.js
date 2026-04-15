@@ -9,124 +9,134 @@ import path from 'path'
 import os from 'os'
 import crypto from 'crypto'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const openai   = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-export const maxDuration = 300 // 5 min timeout for large files
+export const maxDuration = 300
 
+// File size limits
 const LIMITS = {
-  pdf:   50  * 1024 * 1024,  // 50 MB
-  audio: 100 * 1024 * 1024,  // 100 MB
-  video: 500 * 1024 * 1024,  // 500 MB
+  pdf:   50  * 1024 * 1024,
+  audio: 100 * 1024 * 1024,
+  video: 500 * 1024 * 1024,
 }
-const WHISPER_LIMIT = 24 * 1024 * 1024  // 24 MB (Whisper hard limit is 25 MB)
+const WHISPER_LIMIT = 24 * 1024 * 1024
+
+// Formats Whisper accepts natively — no ffmpeg needed
+const WHISPER_NATIVE = new Set(['.mp3', '.mp4', '.wav', '.m4a', '.webm', '.mpeg', '.mpga', '.ogg', '.flac'])
+const MIME_MAP = {
+  '.mp3':  'audio/mpeg',
+  '.mp4':  'video/mp4',
+  '.wav':  'audio/wav',
+  '.m4a':  'audio/m4a',
+  '.webm': 'video/webm',
+  '.mpeg': 'video/mpeg',
+  '.mpga': 'audio/mpeg',
+  '.ogg':  'audio/ogg',
+  '.flac': 'audio/flac',
+}
 
 // ── File type detection ────────────────────────────────────────────────────
 
 function detectFileType(file) {
-  const mime = file.type || ''
+  const mime = (file.type || '').toLowerCase()
   const ext  = path.extname(file.name || '').toLowerCase()
 
   if (mime === 'application/pdf' || ext === '.pdf') return 'pdf'
 
-  const videoMimes = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm', 'video/avi']
   const videoExts  = ['.mp4', '.mov', '.avi', '.webm']
-  if (videoMimes.includes(mime) || videoExts.includes(ext)) return 'video'
+  const videoMimes = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm']
+  if (videoExts.includes(ext) || videoMimes.includes(mime)) return 'video'
 
-  const audioMimes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/m4a', 'audio/x-m4a']
   const audioExts  = ['.mp3', '.wav', '.m4a']
-  if (audioMimes.includes(mime) || audioExts.includes(ext)) return 'audio'
+  const audioMimes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/m4a', 'audio/x-m4a']
+  if (audioExts.includes(ext) || audioMimes.includes(mime)) return 'audio'
 
   return null
 }
 
-// ── ffmpeg helpers (same approach as existing transcribe route) ────────────
+// ── Whisper: send buffer directly (no ffmpeg) ─────────────────────────────
+
+async function transcribeDirect(buffer, fileName) {
+  const ext      = path.extname(fileName).toLowerCase()
+  const mimeType = MIME_MAP[ext] || 'audio/mpeg'
+  const blob     = new Blob([buffer], { type: mimeType })
+  const whisperFile = new File([blob], fileName || 'audio.mp3', { type: mimeType })
+  const result   = await openai.audio.transcriptions.create({ file: whisperFile, model: 'whisper-1' })
+  return result.text
+}
+
+// ── ffmpeg fallback for MOV / AVI / files > 25 MB ─────────────────────────
 
 function getFfmpeg() {
-  const ffmpeg      = require('fluent-ffmpeg')
-  const ffmpegPath  = require('ffmpeg-static')
+  const ffmpeg     = require('fluent-ffmpeg')
+  const ffmpegPath = require('ffmpeg-static')
   const { path: ffprobePath } = require('@ffprobe-installer/ffprobe')
   ffmpeg.setFfmpegPath(ffmpegPath)
   ffmpeg.setFfprobePath(ffprobePath)
   return ffmpeg
 }
 
-function compressAudio(inputPath, outputPath) {
-  const ffmpeg = getFfmpeg()
+function compressToMp3(inputPath, outputPath) {
   return new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
+    getFfmpeg()(inputPath)
       .outputOptions(['-vn', '-ar', '16000', '-ac', '1', '-b:a', '32k'])
       .output(outputPath)
       .on('end', resolve)
-      .on('error', (err) => reject(new Error('Audio compression failed: ' + err.message)))
+      .on('error', err => reject(new Error('Audio compression failed: ' + err.message)))
       .run()
   })
 }
 
-function splitAudio(inputPath, outputPattern, segmentSeconds) {
-  const ffmpeg = getFfmpeg()
-  return new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
-      .outputOptions([
-        '-f', 'segment',
-        '-segment_time', String(segmentSeconds),
-        '-c', 'copy',
-        '-reset_timestamps', '1',
-      ])
-      .output(outputPattern)
-      .on('end', resolve)
-      .on('error', (err) => reject(new Error('Audio split failed: ' + err.message)))
-      .run()
-  })
+async function transcribeViaFfmpeg(buffer, fileName, tmpDir) {
+  await fs.mkdir(tmpDir, { recursive: true })
+  const ext       = path.extname(fileName) || '.tmp'
+  const inputPath = path.join(tmpDir, 'input' + ext)
+  const mp3Path   = path.join(tmpDir, 'compressed.mp3')
+  await fs.writeFile(inputPath, buffer)
+  await compressToMp3(inputPath, mp3Path)
+  const stat = await fs.stat(mp3Path)
+  if (stat.size > WHISPER_LIMIT) {
+    throw new Error(
+      'File is too long to transcribe after compression. ' +
+      'Please trim it to under 2 hours or extract a shorter audio clip.'
+    )
+  }
+  return await transcribeDirect(await fs.readFile(mp3Path), 'audio.mp3')
 }
 
-async function transcribeWhisper(filePath, filename) {
-  const fileBuffer = await fs.readFile(filePath)
-  const blob = new Blob([fileBuffer], { type: 'audio/mpeg' })
-  const file = new File([blob], filename, { type: 'audio/mpeg' })
-  const result = await openai.audio.transcriptions.create({ file, model: 'whisper-1' })
-  return result.text
-}
+// ── Main transcription router ──────────────────────────────────────────────
 
-// ── Transcription: compress → split if needed → Whisper ──────────────────
+async function transcribeAudioVideo(buffer, fileName, fileSize, fileType, tmpDir) {
+  const ext = path.extname(fileName).toLowerCase()
 
-async function transcribeAudioVideo(inputPath, tmpDir) {
-  const compressedPath = path.join(tmpDir, 'compressed.mp3')
-  await compressAudio(inputPath, compressedPath)
-
-  const stat = await fs.stat(compressedPath)
-
-  if (stat.size <= WHISPER_LIMIT) {
-    return await transcribeWhisper(compressedPath, 'audio.mp3')
+  // Fast path: Whisper natively supports this format and it fits in one shot
+  if (WHISPER_NATIVE.has(ext) && fileSize <= WHISPER_LIMIT) {
+    return await transcribeDirect(buffer, fileName)
   }
 
-  // Too large after compression — split into 20-min chunks
-  const chunkPattern = path.join(tmpDir, 'chunk_%03d.mp3')
-  await splitAudio(compressedPath, chunkPattern, 1200)
-
-  const chunkFiles = (await fs.readdir(tmpDir))
-    .filter(f => f.startsWith('chunk_') && f.endsWith('.mp3'))
-    .sort()
-
-  const parts = []
-  for (const chunkFile of chunkFiles) {
-    const text = await transcribeWhisper(path.join(tmpDir, chunkFile), chunkFile)
-    parts.push(text)
+  // For large but supported formats, still try direct first — Whisper may handle it
+  if (WHISPER_NATIVE.has(ext) && fileSize <= LIMITS[fileType]) {
+    try {
+      return await transcribeDirect(buffer, fileName)
+    } catch {
+      // Fall through to ffmpeg
+    }
   }
-  return parts.join(' ')
+
+  // ffmpeg fallback: MOV, AVI, or oversized files
+  return await transcribeViaFfmpeg(buffer, fileName, tmpDir)
 }
 
 // ── Claude: generate structured notes ─────────────────────────────────────
 
 async function generateNotes(content) {
-  const trimmed = content.slice(0, 60000)
-
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
+    model:      'claude-sonnet-4-6',
     max_tokens: 4000,
     messages: [{
-      role: 'user',
-      content: `You are an expert academic tutor. Analyze this lecture content and return ONLY a valid JSON object with exactly this structure — no extra text, no markdown fences:
+      role:    'user',
+      content: `You are an expert academic tutor. Analyze this lecture content and return ONLY a valid JSON object — no extra text, no markdown fences:
 {
   "title": "string",
   "summary": "3-4 sentence overview",
@@ -137,8 +147,8 @@ async function generateNotes(content) {
 }
 
 Content:
-${trimmed}`
-    }]
+${content.slice(0, 60000)}`,
+    }],
   })
 
   const raw = message.content[0].text
@@ -148,37 +158,29 @@ ${trimmed}`
   return JSON.parse(raw)
 }
 
-// ── Update user_knowledge: prepend newest content, cap at 200k chars ───────
+// ── Update knowledge base (non-fatal) ────────────────────────────────────
 
 async function updateUserKnowledge(supabase, userId, newContent) {
-  const { data: existing } = await supabase
-    .from('user_knowledge')
-    .select('combined_knowledge, total_uploads')
-    .eq('user_id', userId)
-    .single()
+  try {
+    const { data: existing } = await supabase
+      .from('user_knowledge')
+      .select('combined_knowledge, total_uploads')
+      .eq('user_id', userId)
+      .single()
 
-  const MAX_KNOWLEDGE = 200000
-  const separator = '\n\n---NEW UPLOAD---\n\n'
+    const MAX = 200000
+    const sep = '\n\n---NEW UPLOAD---\n\n'
+    const combined     = existing
+      ? (newContent + sep + (existing.combined_knowledge || '')).slice(0, MAX)
+      : newContent.slice(0, MAX)
+    const totalUploads = (existing?.total_uploads || 0) + 1
 
-  let combined
-  let totalUploads
-
-  if (existing) {
-    combined     = (newContent + separator + (existing.combined_knowledge || '')).slice(0, MAX_KNOWLEDGE)
-    totalUploads = (existing.total_uploads || 0) + 1
-  } else {
-    combined     = newContent.slice(0, MAX_KNOWLEDGE)
-    totalUploads = 1
+    await supabase
+      .from('user_knowledge')
+      .upsert({ user_id: userId, combined_knowledge: combined, total_uploads: totalUploads, last_updated: new Date().toISOString() }, { onConflict: 'user_id' })
+  } catch {
+    // Non-fatal — knowledge base update failing should not block the upload response
   }
-
-  await supabase
-    .from('user_knowledge')
-    .upsert({
-      user_id:           userId,
-      combined_knowledge: combined,
-      total_uploads:      totalUploads,
-      last_updated:       new Date().toISOString(),
-    }, { onConflict: 'user_id' })
 }
 
 // ── Main handler ───────────────────────────────────────────────────────────
@@ -188,147 +190,124 @@ export async function POST(request) {
 
   try {
     const { userId } = await auth()
-    if (!userId) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
     const supabase = getSupabaseServer()
 
-    // ── Pro / free limit check ─────────────────────────────────────────────
+    // Free plan limit check
     const subscription = await getUserSubscription(userId)
-    const isPro        = isProUser(subscription)
-
-    if (!isPro) {
+    if (!isProUser(subscription)) {
       const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
       const { count } = await supabase
         .from('lectures')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
         .gte('created_at', startOfMonth)
-
-      if (count >= 3) {
-        return Response.json({ error: 'limit_reached' }, { status: 403 })
-      }
+      if (count >= 3) return Response.json({ error: 'limit_reached' }, { status: 403 })
     }
 
-    // ── Parse form data ────────────────────────────────────────────────────
+    // Parse file
     const formData = await request.formData()
     const file     = formData.get('file')
-
     if (!file || typeof file === 'string') {
       return Response.json({ error: 'No file provided.' }, { status: 400 })
     }
 
-    // ── Detect file type ───────────────────────────────────────────────────
     const fileType = detectFileType(file)
     if (!fileType) {
       return Response.json(
-        { error: 'Unsupported file type. Please upload a video (MP4, MOV, AVI, WEBM), audio (MP3, WAV, M4A), or PDF.' },
+        { error: 'Unsupported file type. Please upload MP4, MOV, AVI, WEBM, MP3, WAV, M4A, or PDF.' },
         { status: 400 }
       )
     }
 
-    // ── File size limits ───────────────────────────────────────────────────
-    const sizeLimit = LIMITS[fileType]
-    if (file.size > sizeLimit) {
-      const labels = { pdf: '50 MB', audio: '100 MB', video: '500 MB' }
+    // Size check
+    const sizeLabels = { pdf: '50 MB', audio: '100 MB', video: '500 MB' }
+    if (file.size > LIMITS[fileType]) {
       return Response.json(
-        { error: `File is too large. ${fileType.charAt(0).toUpperCase() + fileType.slice(1)} files must be under ${labels[fileType]}.` },
+        { error: `File too large. ${fileType.charAt(0).toUpperCase() + fileType.slice(1)} must be under ${sizeLabels[fileType]}.` },
         { status: 400 }
       )
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
+    let transcript = ''
+    let pdfText    = ''
+    let warning    = null
 
-    let transcript   = ''
-    let pdfText      = ''
-    let sizeWarning  = null
-
-    // ── Extract content ────────────────────────────────────────────────────
+    // Extract content
     if (fileType === 'pdf') {
       pdfText = cleanText(await extractFromPDF(buffer))
     } else {
-      // Video or audio — write to disk, compress, transcribe
-      await fs.mkdir(tmpDir, { recursive: true })
-      const ext       = path.extname(file.name || '') || (fileType === 'video' ? '.mp4' : '.mp3')
-      const inputPath = path.join(tmpDir, 'input' + ext)
-      await fs.writeFile(inputPath, buffer)
-
-      if (fileType === 'video' && file.size > 25 * 1024 * 1024) {
-        sizeWarning = 'Video transcription works best under 25 MB. For large videos, extracting the audio first (as MP3) will give faster, more accurate results.'
+      if (file.size > 25 * 1024 * 1024) {
+        warning = 'Large video/audio files take longer to process. For best results, extract the audio as MP3 first.'
       }
-
-      transcript = await transcribeAudioVideo(inputPath, tmpDir)
-      transcript = cleanText(transcript)
-
+      transcript = cleanText(
+        await transcribeAudioVideo(buffer, file.name || 'upload.mp4', file.size, fileType, tmpDir)
+      )
       if (!transcript) {
-        return Response.json({ error: 'No speech detected in the audio. Please check the file and try again.' }, { status: 422 })
+        return Response.json({ error: 'No speech detected. Please check the file has audio and try again.' }, { status: 422 })
       }
     }
 
-    // ── Combined content for Claude + knowledge base ───────────────────────
     const combinedContent = [transcript, pdfText].filter(Boolean).join('\n\n')
 
-    // ── Generate structured notes via Claude ───────────────────────────────
+    // Generate notes
     const notes = await generateNotes(combinedContent)
 
-    // ── Save lecture to Supabase ───────────────────────────────────────────
-    const { data: lecture, error: dbError } = await supabase
-      .from('lectures')
-      .insert({
-        user_id:          userId,
-        title:            notes.title,
-        file_type:        fileType,
-        file_name:        file.name || 'upload',
-        file_size:        file.size,
-        transcript:       transcript || null,
-        pdf_text:         pdfText    || null,
-        combined_content: combinedContent,
-        notes,
-      })
-      .select('id')
-      .single()
+    // Save to Supabase (non-fatal on column mismatch — Step 1 SQL may not have run yet)
+    let lectureId = null
+    try {
+      const { data: lecture, error: dbError } = await supabase
+        .from('lectures')
+        .insert({
+          user_id:          userId,
+          title:            notes.title,
+          file_type:        fileType,
+          file_name:        file.name || 'upload',
+          file_size:        file.size,
+          transcript:       transcript || null,
+          pdf_text:         pdfText    || null,
+          combined_content: combinedContent,
+          notes,
+        })
+        .select('id')
+        .single()
 
-    if (dbError) {
-      // Still return notes even if DB save fails
-      return Response.json({ notes, lectureId: null, file_type: fileType, title: notes.title, warning: sizeWarning })
-    }
+      if (!dbError) lectureId = lecture.id
+    } catch {}
 
-    // ── Update user knowledge base ─────────────────────────────────────────
+    // Update knowledge base + user counter (both non-fatal)
     await updateUserKnowledge(supabase, userId, combinedContent)
 
-    // ── Upsert users table (monthly upload counter) ────────────────────────
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('uploads_this_month')
-      .eq('id', userId)
-      .single()
-
-    await supabase
-      .from('users')
-      .upsert({
-        id:                 userId,
-        uploads_this_month: (existingUser?.uploads_this_month || 0) + 1,
-      }, { onConflict: 'id' })
+    try {
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('uploads_this_month')
+        .eq('id', userId)
+        .single()
+      await supabase
+        .from('users')
+        .upsert({ id: userId, uploads_this_month: (existingUser?.uploads_this_month || 0) + 1 }, { onConflict: 'id' })
+    } catch {}
 
     return Response.json({
-      lectureId: lecture.id,
+      lectureId,
       notes,
       title:     notes.title,
       file_type: fileType,
-      ...(sizeWarning ? { warning: sizeWarning } : {}),
+      ...(warning ? { warning } : {}),
     })
 
   } catch (error) {
-    const msg = error.message || 'Upload failed. Please try again.'
-    // Surface user-friendly messages for known errors
+    const msg = error.message || ''
     if (msg.includes('No text found') || msg.includes('No speech detected')) {
       return Response.json({ error: msg }, { status: 422 })
     }
-    if (msg.includes('Failed to extract') || msg.includes('Audio compression')) {
-      return Response.json({ error: msg }, { status: 500 })
+    if (msg.includes('too long to transcribe') || msg.includes('Audio compression')) {
+      return Response.json({ error: msg }, { status: 400 })
     }
-    return Response.json({ error: 'Something went wrong. Please try again.' }, { status: 500 })
+    return Response.json({ error: 'Upload failed: ' + (msg || 'unknown error') }, { status: 500 })
   } finally {
     fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {})
   }
