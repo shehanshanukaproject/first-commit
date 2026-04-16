@@ -642,11 +642,32 @@ export default function Dashboard() {
                     <p style={{ fontSize: 15, fontWeight: 600, color: C.gray800, marginBottom: 12 }}>
                       {dragOver ? 'Drop it here!' : 'Drop your file here or click to browse'}
                     </p>
-                    <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 10, fontSize: 12, color: C.gray600 }}>
-                      <span>🎥 Video <em style={{ color: C.gray400 }}>MP4 MOV AVI WEBM · 500MB</em></span>
-                      <span>🎵 Audio <em style={{ color: C.gray400 }}>MP3 WAV M4A · 100MB</em></span>
-                      <span>📄 PDF <em style={{ color: C.gray400 }}>50MB</em></span>
+
+                    {/* File type rows — full width, clearly laid out */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', marginBottom: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                        <span>🎥</span>
+                        <span style={{ fontWeight: 600, color: C.gray800 }}>Video</span>
+                        <span style={{ color: C.gray400, fontSize: 12 }}>MP4 · MOV · AVI · WEBM</span>
+                        <span style={{ background: C.accentLight, color: C.accent, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 100 }}>up to 500 MB</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                        <span>🎵</span>
+                        <span style={{ fontWeight: 600, color: C.gray800 }}>Audio</span>
+                        <span style={{ color: C.gray400, fontSize: 12 }}>MP3 · WAV · M4A</span>
+                        <span style={{ background: C.accentLight, color: C.accent, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 100 }}>up to 100 MB</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                        <span>📄</span>
+                        <span style={{ fontWeight: 600, color: C.gray800 }}>PDF</span>
+                        <span style={{ color: C.gray400, fontSize: 12 }}>Any text-based PDF</span>
+                        <span style={{ background: C.accentLight, color: C.accent, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 100 }}>up to 50 MB</span>
+                      </div>
                     </div>
+
+                    <p style={{ fontSize: 11, color: C.gray400, marginTop: 4 }}>
+                      Currently supported · Files upload directly — no server size limit
+                    </p>
                   </div>
                 )}
               </div>
