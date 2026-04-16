@@ -8,6 +8,9 @@ export async function POST(request) {
 
     const { fileName } = await request.json()
     if (!fileName) return Response.json({ error: 'fileName required' }, { status: 400 })
+    if (typeof fileName !== 'string' || fileName.length > 255) {
+      return Response.json({ error: 'Invalid file name.' }, { status: 400 })
+    }
 
     const supabase  = getSupabaseServer()
     // Sanitise filename and prefix with userId so paths never collide

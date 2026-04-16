@@ -11,7 +11,12 @@ async function verifyWebhookSignature(request, rawBody) {
   try {
     const webhookId = process.env.PAYPAL_WEBHOOK_ID
     if (!webhookId) {
-      console.warn('[Webhook] PAYPAL_WEBHOOK_ID not set — skipping signature verification (unsafe!)')
+      // In development (sandbox) only — NEVER allow in production
+      if (process.env.PAYPAL_MODE === 'live') {
+        console.error('[Webhook] PAYPAL_WEBHOOK_ID is required in live mode — rejecting request')
+        return false
+      }
+      console.warn('[Webhook] PAYPAL_WEBHOOK_ID not set — skipping verification (sandbox only!)')
       return true
     }
 

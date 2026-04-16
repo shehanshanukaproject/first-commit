@@ -1,10 +1,15 @@
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 export async function POST(request) {
   try {
+    if (!process.env.RESEND_API_KEY) {
+      console.error('[Support] RESEND_API_KEY is not set')
+      return Response.json({ error: 'Email service not configured. Please email support@lectureai.cc directly.' }, { status: 503 })
+    }
+
+    const resend = new Resend(process.env.RESEND_API_KEY)
+
     const { userId } = await auth()
     if (!userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
