@@ -193,3 +193,12 @@ export async function POST(request) {
   // Always return 200 — tells PayPal we received the event
   return Response.json({ received: true }, { status: 200 })
 }
+
+// GET — health check (browsers visiting the URL see this instead of 405)
+export async function GET() {
+  return Response.json({
+    status: 'ok',
+    endpoint: 'LectureAI PayPal Webhook',
+    message: 'This endpoint accepts POST requests from PayPal only.',
+  }, { status: 200 })
+}
